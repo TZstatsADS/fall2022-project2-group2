@@ -14,19 +14,30 @@ library(osmdata)
 library(ggplot2)
 library(dplyr)
 library(ggnewscale)
+library(RSocrata)
+library(rstudioapi)
+library(leaflet)
+#set working directory
+current_path <- rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+getwd()
 ```
 
 
 ```{r}
 #### Load the Restaurant dataset
-data = read.csv("DOHMH_New_York_City_Restaurant_Inspection_Results.csv")
-data$year <- format(as.Date(data$INSPECTION.DATE, format="%d/%m/%Y"),"%Y") ## Extract Years
+data =  read.socrata(
+  "https://data.cityofnewyork.us/resource/43nn-pn8j.json",
+  app_token = "zTRehp1897SQtpYtBiIOUMfR4"
+)
+
+data$year <- format(data$inspection_date,"%Y") ## Extract Years
 
 ###filter the dataset
 df =
   data %>%
-  filter(data$year >= 2019 & ZIPCODE!="" & DBA != "") %>%
-  mutate(GRADE=replace(GRADE, GRADE == "", NA))
+  filter(data$year >= 2019 & zipcode!="" & dba != "") %>%
+  mutate(grade=replace(grade, grade == "", NA))
 
 head(df)
 ```
@@ -34,7 +45,7 @@ head(df)
 
 ```{r}
 # Read the geojson file containing Spatial Info
-spdf_file <- geojson_read(   "zip_code_040114.geojson", what = "sp")
+spdf_file <- geojson_read("../data/zip_code_040114.geojson", what = "sp")
 
 stats_df = spdf_file@data
 
@@ -74,58 +85,58 @@ ggplot() +
 #### Number of restaurant per ZIPCODE
 Num_Rest_Code =
   df%>%
-  group_by(ZIPCODE, DBA, Latitude, Longitude)%>%
+  group_by(zipcode, dba, latitude, longitude)%>%
   count() %>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   count()
 
 Critical_2019_by_Code = 
   df%>%
   filter(year == 2019)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Critical_2020_by_Code = 
   df%>%
   filter(year == 2020)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Critical_2021_by_Code = 
   df%>%
   filter(year == 2021)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Critical_2022_by_Code = 
   df%>%
   filter(year == 2022)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
 
 
 spdf_file_2022 = spdf_file
 spdf_file_2022@data =
 spdf_file_2022@data %>%
-                 left_join(Critical_2022_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2022_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
 spdf_file_2019 = spdf_file
 spdf_file_2019@data =
 spdf_file_2019@data %>%
-                 left_join(Critical_2019_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2019_by_Code, c("ZIPCODE"="zipcode"))
 
 
 spdf_file_2020 = spdf_file
 spdf_file_2020@data =
 spdf_file_2020@data %>%
-                 left_join(Critical_2020_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2020_by_Code, c("ZIPCODE"="zipcode"))
 
 spdf_file_2021 = spdf_file
 spdf_file_2021@data =
 spdf_file_2021@data %>%
-                 left_join(Critical_2021_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2021_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
@@ -181,32 +192,32 @@ leaflet()%>%
 
 Total_violation = 
   df%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
 
 
 Total_2019_by_Code = 
   df%>%
   filter(year == 2019)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Total_2020_by_Code = 
   df%>%
   filter(year == 2020)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Total_2021_by_Code = 
   df%>%
   filter(year == 2021)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Total_2022_by_Code = 
   df%>%
   filter(year == 2022)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
 
 
@@ -217,25 +228,25 @@ Total_2022_by_Code =
 spdf_file_2022 = spdf_file
 spdf_file_2022@data =
 spdf_file_2022@data %>%
-                 left_join(Total_2022_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2022_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
 spdf_file_2019 = spdf_file
 spdf_file_2019@data =
 spdf_file_2019@data %>%
-                 left_join(Total_2019_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2019_by_Code, c("ZIPCODE"="zipcode"))
 
 
 spdf_file_2020 = spdf_file
 spdf_file_2020@data =
 spdf_file_2020@data %>%
-                 left_join(Total_2020_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2020_by_Code, c("ZIPCODE"="zipcode"))
 
 spdf_file_2021 = spdf_file
 spdf_file_2021@data =
 spdf_file_2021@data %>%
-                 left_join(Total_2021_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2021_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
