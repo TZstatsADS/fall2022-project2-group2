@@ -4,439 +4,365 @@ output: html_notebook
 runtime: shiny
 ---
 
-
-
 ```{r}
-library(tidyverse)
-library(geojsonio)
 library(broom)
-library(sf)
-library(osmdata)
-library(ggplot2)
+library(bslib)
 library(dplyr)
+library(geojsonio)
 library(ggnewscale)
+library(ggplot2)
+library(leaflet)
+library(osmdata)
+library(RColorBrewer)
 library(RSocrata)
 library(rstudioapi)
-library(leaflet)
+library(sf)
 library(shiny)
-library(bslib)
-library(RColorBrewer)
-#set working directory
+library(tidyverse)
+
+# Set working directory
 current_path <- rstudioapi::getActiveDocumentContext()$path
 setwd(dirname(current_path))
 getwd()
 ```
 
-
 ```{r}
-#### Load the Restaurant dataset
-data =  read.socrata(
+# Load the restaurant dataset
+data <- read.socrata(
   "https://data.cityofnewyork.us/resource/43nn-pn8j.json",
   app_token = "zTRehp1897SQtpYtBiIOUMfR4"
 )
 
-data$year <- format(data$inspection_date,"%Y") ## Extract Years
+# Extract years
+data$year <- format(data$inspection_date,"%Y")
 
-###filter the dataset
-df =
-  data %>%
-  filter(data$year >= 2019 & zipcode!="" & dba != "") %>%
-  mutate(grade=replace(grade, grade == "", NA))
+# Filter the dataset
+df <- data %>%
+  filter(data$year >= 2019 & zipcode != "" & dba != "") %>%
+  mutate(grade = replace(grade, grade == "", NA))
 
 head(df)
 ```
 
-
 ```{r}
-# Read the geojson file containing Spatial Info
+# Read the geojson file containing spatial info
 spdf_file <- geojson_read("../data/zip_code_040114.geojson", what = "sp")
 
-stats_df = spdf_file@data
+stats_df <- spdf_file@data
 
 # Convert it to a spatial data frame, with zip code as index
-spdf_data <- tidy(  spdf_file,
-  region="ZIPCODE"  # Use ZIPCODE variable as index, the index will be named "id"
+spdf_data <- tidy(spdf_file,
+  region = "ZIPCODE"  # Use ZIPCODE variable as index, the index will be named "id"
 )
 ```
 
-
-### Section II: interactive map
+# Section I: Trend plot
 
 ```{r}
 
-##### None Interactive map (Population by region)
+```
+
+# Section II: Interactive map
+
+```{r}
+# Non-interactive map (population by region)
 ggplot() +
-  geom_polygon(data=spdf_data %>%
-                 left_join(stats_df, c("id"="ZIPCODE")),
-               aes(x=long,
-                   y=lat,
-                   group=group,
-                   fill=POPULATION),
-               color="white",
-               size=.2) +
+  geom_polygon(data = spdf_data %>% left_join(stats_df, c("id" = "ZIPCODE")),
+               aes(x = long, y = lat, group = group, fill = POPULATION),
+               color = "white", size = .2) +
   theme_void() +
   coord_map() +
   scale_fill_distiller(palette = "YlGnBu", direction = 1) +
-  labs(title="Population in New York City",
-       subtitle="Neighborhoods are filled by population",
-       fill="Population")
+  labs(title = "Population in New York City",
+       subtitle = "Neighborhoods are filled by population",
+       fill = "Population")
 ```
 
-
-
 ```{r}
-
-#### Number of restaurant per ZIPCODE
-Num_Rest_Code =
-  df%>%
-  group_by(zipcode, dba, latitude, longitude)%>%
+# Number of restaurants per zipcode
+Num_Rest_Code <- df %>%
+  group_by(zipcode, dba, latitude, longitude) %>%
   count() %>%
-  group_by(zipcode)%>%
+  group_by(zipcode) %>%
   count()
 
-Critical_2019_by_Code = 
-  df%>%
-  filter(year == 2019)%>%
-  group_by(zipcode)%>%
+Critical_2019_by_Code <- df %>%
+  filter(year == 2019) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
   
-Critical_2020_by_Code = 
-  df%>%
-  filter(year == 2020)%>%
-  group_by(zipcode)%>%
+Critical_2020_by_Code <- df %>%
+  filter(year == 2020) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
   
-Critical_2021_by_Code = 
-  df%>%
-  filter(year == 2021)%>%
-  group_by(zipcode)%>%
+Critical_2021_by_Code <- df %>%
+  filter(year == 2021) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
   
-Critical_2022_by_Code = 
-  df%>%
-  filter(year == 2022)%>%
-  group_by(zipcode)%>%
+Critical_2022_by_Code <- df %>%
+  filter(year == 2022) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
 
+Critical_spdf_file_2022 <- spdf_file
+Critical_spdf_file_2022@data <- Critical_spdf_file_2022@data %>%
+  left_join(Critical_2022_by_Code, c("ZIPCODE" = "zipcode"))
 
-Critical_spdf_file_2022 = spdf_file
-Critical_spdf_file_2022@data =
-Critical_spdf_file_2022@data %>%
-                 left_join(Critical_2022_by_Code, c("ZIPCODE"="zipcode"))
+Critical_spdf_file_2019 <- spdf_file
+Critical_spdf_file_2019@data <- Critical_spdf_file_2019@data %>%
+  left_join(Critical_2019_by_Code, c("ZIPCODE" = "zipcode"))
 
+Critical_spdf_file_2020 <- spdf_file
+Critical_spdf_file_2020@data <- Critical_spdf_file_2020@data %>%
+  left_join(Critical_2020_by_Code, c("ZIPCODE" = "zipcode"))
 
+Critical_spdf_file_2021 <- spdf_file
+Critical_spdf_file_2021@data <- Critical_spdf_file_2021@data %>%
+  left_join(Critical_2021_by_Code, c("ZIPCODE" = "zipcode"))
 
-Critical_spdf_file_2019 = spdf_file
-Critical_spdf_file_2019@data =
-Critical_spdf_file_2019@data %>%
-                 left_join(Critical_2019_by_Code, c("ZIPCODE"="zipcode"))
+critical_violations <- list(Critical_spdf_file_2019, Critical_spdf_file_2020, Critical_spdf_file_2021, Critical_spdf_file_2022)
+names(critical_violations) <- c("2019", "2020", "2021", "2022")
 
+nc_pal <- colorNumeric(palette = "YlOrBr", domain = Critical_spdf_file_2019@data$Total, na.color = 'transparent')
 
-Critical_spdf_file_2020 = spdf_file
-Critical_spdf_file_2020@data =
-Critical_spdf_file_2020@data %>%
-                 left_join(Critical_2020_by_Code, c("ZIPCODE"="zipcode"))
-
-Critical_spdf_file_2021 = spdf_file
-Critical_spdf_file_2021@data =
-Critical_spdf_file_2021@data %>%
-                 left_join(Critical_2021_by_Code, c("ZIPCODE"="zipcode"))
-
-
-critical_violations = list(Critical_spdf_file_2019,Critical_spdf_file_2020,Critical_spdf_file_2021,Critical_spdf_file_2022)
-names(critical_violations) <- c("2019","2020","2021","2022")
-
-
-
-nc_pal= colorNumeric(palette="YlOrBr", domain= Critical_spdf_file_2019@data$Total, na.color = 'transparent')
-
-
-
-leaflet()%>%
-  addProviderTiles("CartoDB")%>%
-  #### First Layer of PolyGons
+leaflet() %>%
+  addProviderTiles("CartoDB") %>%
+  # First layer of polygons
   addPolygons(
-    data = Critical_spdf_file_2022 ,
+    data = Critical_spdf_file_2022,
     weight = 0.5,
     color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
+    stroke = TRUE,
+    opacity = 1,
     fillColor = ~nc_pal(Total),
-    label = ~paste0 ('Total Critical Violation : ' , Total),
+    label = ~paste0('Total Critical Violation : ', Total),
     group = '2022',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    ) %>%
-  
-  #### Second Layer of PolyGons
-    addPolygons(
-    data = Critical_spdf_file_2021 ,
+    highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+  ) %>%
+  # Second layer of polygons
+  addPolygons(
+    data = Critical_spdf_file_2021,
     weight = 0.5,
     color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
+    stroke = TRUE,
+    opacity = 1,
     fillColor = ~nc_pal(Total),
-    
-    label =~paste0 ('Total Critical Violation : ' , Total),
+    label = ~paste0 ('Total Critical Violation : ', Total),
     group = '2021',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    ) %>%
-    addLayersControl(overlayGroups = c("2022", "2021"))%>%
-  
-  
-  
-    addLegend( pal=nc_pal, values= Critical_spdf_file_2022$Total, opacity=0.9, title = "Critical", position = "bottomleft" )
-    
+    highlight = highlightOptions(weight = 3, color = "red", bringToFront =  TRUE)
+  ) %>%
+  addLayersControl(overlayGroups = c("2022", "2021")) %>%
+  addLegend(pal = nc_pal, values = Critical_spdf_file_2022$Total, opacity = 0.9, title = "Critical", position = "bottomleft")
 ```
 
-
-
 ```{r}
-
-
-
-Total_violation = 
-  df%>%
-  group_by(zipcode)%>%
+Total_violation <- df %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
 
-
-Total_2019_by_Code = 
-  df%>%
+Total_2019_by_Code <- df%>%
   filter(year == 2019)%>%
   group_by(zipcode)%>%
   summarize(Total = n())
   
-Total_2020_by_Code = 
-  df%>%
+Total_2020_by_Code <- df%>%
   filter(year == 2020)%>%
   group_by(zipcode)%>%
   summarize(Total = n())
   
-Total_2021_by_Code = 
-  df%>%
+Total_2021_by_Code <- df%>%
   filter(year == 2021)%>%
   group_by(zipcode)%>%
   summarize(Total = n())
   
-Total_2022_by_Code = 
-  df%>%
+Total_2022_by_Code <- df%>%
   filter(year == 2022)%>%
   group_by(zipcode)%>%
   summarize(Total = n())
 
+Total_spdf_file_2022 <- spdf_file
+Total_spdf_file_2022@data <- Total_spdf_file_2022@data %>%
+  left_join(Total_2022_by_Code, c("ZIPCODE" = "zipcode"))
 
+Total_spdf_file_2019 <- spdf_file
+Total_spdf_file_2019@data <- Total_spdf_file_2019@data %>%
+  left_join(Total_2019_by_Code, c("ZIPCODE" = "zipcode"))
 
+Total_spdf_file_2020 <- spdf_file
+Total_spdf_file_2020@data <- Total_spdf_file_2020@data %>%
+  left_join(Total_2020_by_Code, c("ZIPCODE" = "zipcode"))
 
+Total_spdf_file_2021 <- spdf_file
+Total_spdf_file_2021@data <- Total_spdf_file_2021@data %>%
+  left_join(Total_2021_by_Code, c("ZIPCODE" = "zipcode"))
 
-##### Join datasets
-Total_spdf_file_2022 = spdf_file
-Total_spdf_file_2022@data =
-Total_spdf_file_2022@data %>%
-                 left_join(Total_2022_by_Code, c("ZIPCODE"="zipcode"))
+total_violation <- list(Total_spdf_file_2019, Total_spdf_file_2020, Total_spdf_file_2021, Total_spdf_file_2022)
+names(total_violation) <- c("2019", "2020", "2021", "2022")
 
-
-
-Total_spdf_file_2019 = spdf_file
-Total_spdf_file_2019@data =
-Total_spdf_file_2019@data %>%
-                 left_join(Total_2019_by_Code, c("ZIPCODE"="zipcode"))
-
-
-Total_spdf_file_2020 = spdf_file
-Total_spdf_file_2020@data =
-Total_spdf_file_2020@data %>%
-                 left_join(Total_2020_by_Code, c("ZIPCODE"="zipcode"))
-
-Total_spdf_file_2021 = spdf_file
-Total_spdf_file_2021@data =
-Total_spdf_file_2021@data %>%
-                 left_join(Total_2021_by_Code, c("ZIPCODE"="zipcode"))
-
-
-total_violation <- list(Total_spdf_file_2019,Total_spdf_file_2020,Total_spdf_file_2021,Total_spdf_file_2022)
-names(total_violation) <- c("2019","2020","2021","2022")
-
-
-##### colors
-nc_pal= colorNumeric(palette="YlOrBr", domain= Total_spdf_file_2019@data$Total, na.color = 'transparent')
-
+nc_pal <- colorNumeric(palette = "YlOrBr", domain = Total_spdf_file_2019@data$Total, na.color = 'transparent')
 
 leaflet()%>%
   addProviderTiles("CartoDB")%>%
-  #### First Layer of PolyGons
+  # First layer of polygons
   addPolygons(
-    data = Total_spdf_file_2022 ,
+    data = Total_spdf_file_2022,
     weight = 0.5,
     color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
+    stroke = TRUE,
+    opacity = 1,
     fillColor = ~nc_pal(Total),
-    label = ~paste0 ('Total Critical Violation : ' , Total),
+    label = ~paste0 ('Total Critical Violation : ', Total),
     group = '2022',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    ) %>%
-  
-  #### Second Layer of PolyGons
-    addPolygons(
-    data = Total_spdf_file_2021 ,
+    highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+  ) %>%
+  # Second layer of polygons
+  addPolygons(
+    data = Total_spdf_file_2021,
     weight = 0.5,
     color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
+    stroke = TRUE,
+    opacity = 1,
     fillColor = ~nc_pal(Total),
-    label =~paste0 ('Total  Violation : ' , Total),
+    label = ~paste0 ('Total Violation : ', Total),
     group = '2021',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    ) %>%
-    addLayersControl(overlayGroups = c("2022", "2021"))%>%
-  
-  #####Third layer
-    addPolygons(
-    data = Total_spdf_file_2020 ,
+    highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+  ) %>%
+  addLayersControl(overlayGroups = c("2022", "2021")) %>%
+  # Third layer of polygons
+  addPolygons(
+    data = Total_spdf_file_2020,
     weight = 0.5,
     color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
+    stroke = TRUE,
+    opacity = 1,
     fillColor = ~nc_pal(Total),
-    
-    label =~paste0 ('Total  Violation : ' , Total),
+    label = ~paste0 ('Total Violation : ', Total),
     group = '2020',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    ) %>%
-  
-  ####Fourth
-    addPolygons(
-    data = Total_spdf_file_2019 ,
+    highlight = highlightOptions(weight  = 3, color = "red", bringToFront = TRUE)
+  ) %>%
+  # Fourth layer of polygons
+  addPolygons(
+    data = Total_spdf_file_2019,
     weight = 0.5,
     color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
+    stroke = TRUE,
+    opacity = 1,
     fillColor = ~nc_pal(Total),
-    label =~paste0 ('Total  Violation : ' , Total),
+    label = ~paste0 ('Total Violation : ', Total),
     group = '2019',
     highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    ) %>%
-   
-  
-    addLayersControl(overlayGroups = c("2022", "2021",'2020', '2019'))%>%
-    addLegend( pal=nc_pal, values= Total_spdf_file_2022$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+  ) %>%
+  addLayersControl(overlayGroups = c('2022', '2021', '2020', '2019')) %>%
+  addLegend(pal = nc_pal, values = Total_spdf_file_2022$Total, opacity = 0.9, title = "Count of Total Violation", position = "bottomleft")
 
 violations <- list(total_violation,critical_violations)
 names(violations) <- c("Number of Total Violations","Number of Crital Violations")
-
 ```
 
-
-#### restaurant grade info
 ```{r}
+# Restaurant grade info
 gradeInfo <- data %>%
-  filter(!is.na(score))%>%
-  group_by(dba)%>%
-  filter(inspection_date==max(inspection_date))%>%
-  select(dba,phone,grade,longitude,latitude,cuisine_description,zipcode,boro)%>%
-  distinct(dba, .keep_all = T)%>%
+  filter(!is.na(score)) %>%
+  group_by(dba) %>%
+  filter(inspection_date == max(inspection_date)) %>%
+  select(dba, phone, grade, longitude, latitude, cuisine_description, zipcode, boro) %>%
+  distinct(dba,.keep_all = TRUE) %>%
   ungroup()
+
 gradeInfo$latitude <- as.numeric(gradeInfo$latitude)
 gradeInfo$longitude <- as.numeric(gradeInfo$longitude)
-
 ```
 
-
-
-
-### Section III: Rshiny App
-
+# Section III: Shiny app
 
 ```{r}
-nc_pal= colorNumeric(palette="YlOrBr", domain= Total_spdf_file_2022@data$Total,na.color = 'transparent')
+nc_pal <- colorNumeric(palette ="YlOrBr", domain = Total_spdf_file_2022@data$Total, na.color = 'transparent')
+
 ui <- navbarPage(
- theme = bs_theme(bootswatch = "litera"),
+  theme = bs_theme(bootswatch = "litera"), 
   "Food Inspectation",
   tabPanel("Introduction"),
   tabPanel("Static Plots"),
- 
   navbarMenu("Interactive Plots",
              tabPanel("Interactive Map",
-           fluidRow(column(6,selectInput("type","Type of Violations:",
-                                    c("Number of Total Violations",
-                                      "Number of Crital Violations"))),
-                    column(6,selectInput("time","Year:",
-                                    c("2019","2020","2021","2022")))),
-          fluidRow(leafletOutput("map",height = 1000))),
-          
-          
-            tabPanel("Comparison between Years",
-                      fluidRow(column(4,selectInput("type_comp","Type of Violations:",
-                                    c("Number of Total Violations",
-                                      "Number of Crital Violations"))),
-                    column(4,selectInput("time1","Year:",
-                                    c("2019","2020","2021","2022"))),
-                    column(4,selectInput("time2","Year:",
-                                    c("2019","2020","2021","2022"),selected = "2020"))),
-                    fluidRow(column(6,leafletOutput("map_comp1",height=600)), column(6,leafletOutput("map_comp2",height=600))))),
- 
-  tabPanel("Reference")
+                      fluidRow(column(6, selectInput("type", "Type of Violations:",
+                                                   c("Number of Total Violations",
+                                                     "Number of Crital Violations"))),
+                               column(6, selectInput("time", "Year:",
+                                                    c("2019", "2020", "2021", "2022")))),
+                     fluidRow(leafletOutput("map", height = 1000))),
+             tabPanel("Comparison between Years",
+                      fluidRow(column(4, selectInput("type_comp", "Type of Violations:",
+                                                     c("Number of Total Violations",
+                                                       "Number of Crital Violations"))),
+                               column(4, selectInput("time1", "Year:",
+                                                     c("2019", "2020", "2021", "2022"))),
+                               column(4, selectInput("time2", "Year:",
+                                                     c("2019", "2020", "2021", "2022"),
+                                                     selected = "2020"))),
+                      fluidRow(column(6, leafletOutput("map_comp1", height = 600)),
+                               column(6, leafletOutput("map_comp2", height = 600))))),
+ tabPanel("Reference")
 )
+
 server <- function(input, output,session){
-  #interactive map
+  # Interactive map
   output$map <- renderLeaflet({
-    leaflet()%>%
-  addProviderTiles("CartoDB")%>%
-  #### First Layer of PolyGons
-  addPolygons(
-    data = violations[[input$type]][[input$time]],
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    fillOpacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label = ~paste0 ('Total Violations : ' , Total),
-    group = '2022',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-    )%>%
-    addLegend( pal=nc_pal, values= violations[[input$type]][[input$time]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
-    })
+    leaflet() %>%
+    addProviderTiles("CartoDB") %>%
+    addPolygons(
+      data = violations[[input$type]][[input$time]],
+      weight = 0.5,
+      color = "black",
+      stroke = TRUE,
+      opacity = 1,
+      fillColor = ~nc_pal(Total),
+      label = ~paste0 ('Total Violations : ', Total),
+      group = '2022',
+      highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+    ) %>%
+    addLegend(pal = nc_pal, values = violations[[input$type]][[input$time]]$Total, opacity = 0.9, title = "Count of Total Violation", position = "bottomleft" )
+  })
   
-  
-  
-  
-#interactive map compared by year  
-    output$map_comp1 <- renderLeaflet({
-      leaflet()%>%
-      addProviderTiles("CartoDB")%>%
-      addPolygons(
+  # Interactive map compared by year  
+  output$map_comp1 <- renderLeaflet({
+    leaflet() %>%
+    addProviderTiles("CartoDB") %>%
+    addPolygons(
       data = violations[[input$type_comp]][[input$time1]],
       weight = 0.5,
       color = "black",
-      stroke=TRUE ,
-      fillOpacity = 1 ,
+      stroke = TRUE,
+      opacity = 1,
+      fillOpacity = 1,
       fillColor = ~nc_pal(Total),
-      label = ~paste0 ('Total Violations : ' , Total),
+      label = ~paste0 ('Total Violations : ', Total),
       group = '2022',
-      highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-      )%>%
-      addLegend( pal=nc_pal, values= violations[[input$type]][[input$time1]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+      highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+    ) %>%
+    addLegend(pal = nc_pal, values= violations[[input$type]][[input$time1]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
     })
-    output$map_comp2 <- renderLeaflet({
-      leaflet()%>%
-      addProviderTiles("CartoDB")%>%
-      addPolygons(
+  
+  output$map_comp2 <- renderLeaflet({
+    leaflet() %>%
+    addProviderTiles("CartoDB") %>%
+    addPolygons(
       data = violations[[input$type_comp]][[input$time2]],
       weight = 0.5,
       color = "black",
-      stroke=TRUE ,
-      fillOpacity = 1 ,
+      stroke = TRUE,
+      opacity = 1,
+      fillOpacity = 1,
       fillColor = ~nc_pal(Total),
-      label = ~paste0 ('Total Violations : ' , Total),
+      label = ~paste0 ('Total Violations : ', Total),
       group = '2022',
-      highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-      )%>%
-      addLegend( pal=nc_pal, values= violations[[input$type]][[input$time2]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
-    })
-    
-  
+      highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+    ) %>%
+    addLegend(pal = nc_pal, values = violations[[input$type]][[input$time2]]$Total, opacity = 0.9, title = "Count of Total Violation", position = "bottomleft" )
+  })
 }
 
 shinyApp(ui,server)
-
 ```
