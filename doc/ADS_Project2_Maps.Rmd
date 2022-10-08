@@ -19,6 +19,7 @@ library(rstudioapi)
 library(sf)
 library(shiny)
 library(tidyverse)
+library(wesanderson)
 
 # Set working directory
 current_path <- rstudioapi::getActiveDocumentContext()$path
@@ -56,13 +57,48 @@ spdf_data <- tidy(spdf_file,
 )
 ```
 
-# Section I: Trend plot
+# Section I: Filtered plots
 
 ```{r}
+# Number of actions over time
+df %>%
+  group_by(year, action) %>%
+  summarize(num_violations = n()) %>%
+  ggplot(aes(x = year, y = num_violations, fill = action)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of Actions over Time", x = "Year", y = "Count", fill = "Action") +
+  scale_fill_manual(values = wes_palettes$Moonrise3[c(3, 4, 5, 1, 2)]) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 5, byrow = TRUE))
+  
+# Number of violations by critical level over time
+df %>%
+  filter(critical_flag != "Not Applicable") %>%
+  group_by(year, critical_flag) %>%
+  summarize(num_violations = n()) %>%
+  ggplot(aes(x = year, y = num_violations, fill = critical_flag)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of Violations by Critical Level over Time", x = "Year", y = "Count", fill = "Critical Level") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
+# Top 5 violations
+df %>%
+  group_by(year, violation_code) %>%
+  summarize(num_violations = n()) %>%
+  ungroup() %>%
+  group_by(year) %>%
+  slice_max(num_violations, n = 5) %>%
+  ggplot(aes(x = year, y = num_violations, fill = violation_code)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 5 Violations over Time", x = "Year", y = "Count", fill = "Violation Code") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
 
-# Section II: Interactive map
+# Section II: Interactive plots
 
 ```{r}
 # Non-interactive map (population by region)
@@ -162,24 +198,24 @@ Total_violation <- df %>%
   group_by(zipcode) %>%
   summarize(Total = n())
 
-Total_2019_by_Code <- df%>%
-  filter(year == 2019)%>%
-  group_by(zipcode)%>%
+Total_2019_by_Code <- df %>%
+  filter(year == 2019) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
   
-Total_2020_by_Code <- df%>%
-  filter(year == 2020)%>%
-  group_by(zipcode)%>%
+Total_2020_by_Code <- df %>%
+  filter(year == 2020) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
   
-Total_2021_by_Code <- df%>%
-  filter(year == 2021)%>%
-  group_by(zipcode)%>%
+Total_2021_by_Code <- df %>%
+  filter(year == 2021) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
   
-Total_2022_by_Code <- df%>%
-  filter(year == 2022)%>%
-  group_by(zipcode)%>%
+Total_2022_by_Code <- df %>%
+  filter(year == 2022) %>%
+  group_by(zipcode) %>%
   summarize(Total = n())
 
 Total_spdf_file_2022 <- spdf_file
@@ -279,35 +315,149 @@ gradeInfo$longitude <- as.numeric(gradeInfo$longitude)
 
 ```{r}
 nc_pal <- colorNumeric(palette ="YlOrBr", domain = Total_spdf_file_2022@data$Total, na.color = 'transparent')
+borough_list <- append("Overall", unique(df$boro))
+cuisine_list <- append("Overall", unique(df$cuisine_description))
 
 ui <- navbarPage(
   theme = bs_theme(bootswatch = "litera"), 
-  "Food Inspectation",
+  "Restaurant Inspectation",
   tabPanel("Introduction"),
-  tabPanel("Static Plots"),
-  navbarMenu("Interactive Plots",
-             tabPanel("Interactive Map",
-                      fluidRow(column(6, selectInput("type", "Type of Violations:",
-                                                   c("Number of Total Violations",
-                                                     "Number of Crital Violations"))),
-                               column(6, selectInput("time", "Year:",
-                                                    c("2019", "2020", "2021", "2022")))),
-                     fluidRow(leafletOutput("map", height = 1000))),
-             tabPanel("Comparison between Years",
-                      fluidRow(column(4, selectInput("type_comp", "Type of Violations:",
-                                                     c("Number of Total Violations",
-                                                       "Number of Crital Violations"))),
-                               column(4, selectInput("time1", "Year:",
-                                                     c("2019", "2020", "2021", "2022"))),
-                               column(4, selectInput("time2", "Year:",
-                                                     c("2019", "2020", "2021", "2022"),
-                                                     selected = "2020"))),
-                      fluidRow(column(6, leafletOutput("map_comp1", height = 600)),
-                               column(6, leafletOutput("map_comp2", height = 600))))),
- tabPanel("Reference")
+  tabPanel("Filtered Plots",
+    fluidRow(
+      column(3,
+        selectInput("borough", "Borough", borough_list[!borough_list %in% c("0")], selected = "Overall"),
+        selectInput("cuisine", "Cuisine", cuisine_list, selected = "Overall")
+      ),
+      column(9, 
+        plotOutput("plot_action"),
+        plotOutput("plot_critical_level"),
+        plotOutput("plot_top_5_violation")
+      )
+    )
+  ),
+    
+  tabPanel("Interactive Map",
+    fluidRow(
+      column(3,
+        selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Crital Violations")),
+        selectInput("time", "Year", c("2019", "2020", "2021", "2022"))
+      ),
+      column(9,
+        leafletOutput("map", height = 1000)
+      )
+    )
+  ),
+    
+  tabPanel("Comparison",
+    fluidRow(
+      column(4,
+        selectInput("type_comp", "Type of Violations", c("Number of Total Violations", "Number of Crital Violations"))
+      ),
+      column(4,
+        selectInput("time1", "Year", c("2019", "2020", "2021", "2022"))
+      ),
+      column(4,
+        selectInput("time2", "Year", c("2019", "2020", "2021", "2022"), selected = "2020")
+      )
+    ),
+    
+    fluidRow(
+      column(6,
+        leafletOutput("map_comp1", height = 600)
+      ),
+      column(6,
+        leafletOutput("map_comp2", height = 600)
+      )
+    )
+  ),
+  
+  tabPanel("Reference")
 )
 
 server <- function(input, output,session){
+  # Filtered plots
+  output$plot_action <- renderPlot({
+    if (input$borough == 'Overall' & input$cuisine == 'Overall') {
+      df_action <- df
+    } else if (input$borough != 'Overall' & input$cuisine == 'Overall') {
+      df_action <- df %>%
+        filter(boro == input$borough)
+    } else if (input$borough == 'Overall' & input$cuisine != 'Overall') {
+      df_action <- df %>%
+        filter(cuisine_description == input$cuisine)
+    } else {
+      df_action <- df %>%
+        filter(boro == input$borough,
+               cuisine_description == input$cuisine)
+    }
+    
+    df_action %>%
+      group_by(year, action) %>%
+      summarize(num_violations = n()) %>%
+      ggplot(aes(x = year, y = num_violations, fill = action)) +
+      geom_bar(stat = "identity") +
+      labs(title = "Number of Actions over Time", x = "Year", y = "Count", fill = "Action") +
+      scale_fill_manual(values = wes_palettes$Moonrise3[c(3, 4, 5, 1, 2)]) +
+      theme_minimal() +
+      theme(legend.position = "bottom") +
+      guides(fill = guide_legend(nrow = 5, byrow = TRUE))
+  })
+  
+  output$plot_critical_level <- renderPlot({
+    if (input$borough == 'Overall' & input$cuisine == 'Overall') {
+      df_critical <- df
+    } else if (input$borough != 'Overall' & input$cuisine == 'Overall') {
+      df_critical <- df %>%
+        filter(boro == input$borough)
+    } else if (input$borough == 'Overall' & input$cuisine != 'Overall') {
+      df_critical <- df %>%
+        filter(cuisine_description == input$cuisine)
+    } else {
+      df_critical <- df %>%
+        filter(boro == input$borough,
+               cuisine_description == input$cuisine)
+    }
+    
+    df_critical %>%
+      filter(critical_flag != "Not Applicable") %>%
+      group_by(year, critical_flag) %>%
+      summarize(num_violations = n()) %>%
+      ggplot(aes(x = year, y = num_violations, fill = critical_flag)) +
+      geom_bar(stat = "identity") +
+      labs(title = "Number of Violations by Critical Level over Time", x = "Year", y = "Count", fill = "Critical Level") +
+      theme_minimal() +
+      theme(legend.position = "bottom")
+  })
+  
+  output$plot_top_5_violation <- renderPlot({
+    if (input$borough == 'Overall' & input$cuisine == 'Overall') {
+      df_top_5 <- df
+    } else if (input$borough != 'Overall' & input$cuisine == 'Overall') {
+      df_top_5 <- df %>%
+        filter(boro == input$borough)
+    } else if (input$borough == 'Overall' & input$cuisine != 'Overall') {
+      df_top_5 <- df %>%
+        filter(cuisine_description == input$cuisine)
+    } else {
+      df_top_5 <- df %>%
+        filter(boro == input$borough,
+               cuisine_description == input$cuisine)
+    }
+    
+    df_top_5 %>%
+      group_by(year, violation_code) %>%
+      summarize(num_violations = n()) %>%
+      ungroup() %>%
+      group_by(year) %>%
+      slice_max(num_violations, n = 5) %>%
+      ggplot(aes(x = year, y = num_violations, fill = violation_code)) +
+      geom_bar(stat = "identity") +
+      labs(title = "Top 5 Violations over Time", x = "Year", y = "Count", fill = "Violation Code") +
+      scale_fill_brewer(palette = "Set2") +
+      theme_minimal() +
+      theme(legend.position = "bottom")
+  })
+    
   # Interactive map
   output$map <- renderLeaflet({
     leaflet() %>%
