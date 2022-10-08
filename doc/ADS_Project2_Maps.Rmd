@@ -327,7 +327,19 @@ names(violations) <- c("Number of Total Violations","Number of Crital Violations
 ```
 
 
+#### restaurant grade info
+```{r}
+gradeInfo <- data %>%
+  filter(!is.na(score))%>%
+  group_by(dba)%>%
+  filter(inspection_date==max(inspection_date))%>%
+  select(dba,phone,grade,longitude,latitude,cuisine_description,zipcode,boro)%>%
+  distinct(dba, .keep_all = T)%>%
+  ungroup()
+gradeInfo$latitude <- as.numeric(gradeInfo$latitude)
+gradeInfo$longitude <- as.numeric(gradeInfo$longitude)
 
+```
 
 
 
@@ -336,10 +348,11 @@ names(violations) <- c("Number of Total Violations","Number of Crital Violations
 
 
 ```{r}
-nc_pal= colorNumeric(palette="YlOrBr", domain= Total_spdf_file_2019@data$Total,na.color = 'transparent')
+nc_pal= colorNumeric(palette="YlOrBr", domain= Total_spdf_file_2022@data$Total,na.color = 'transparent')
 ui <- navbarPage(
  theme = bs_theme(bootswatch = "litera"),
   "Food Inspectation",
+  tabPanel("Introduction"),
   tabPanel("Static Plots"),
  
   navbarMenu("Interactive Plots",
@@ -375,7 +388,7 @@ server <- function(input, output,session){
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
-    opacity = 1 ,
+    fillOpacity = 1 ,
     fillColor = ~nc_pal(Total),
     label = ~paste0 ('Total Violations : ' , Total),
     group = '2022',
@@ -396,7 +409,7 @@ server <- function(input, output,session){
       weight = 0.5,
       color = "black",
       stroke=TRUE ,
-      opacity = 1 ,
+      fillOpacity = 1 ,
       fillColor = ~nc_pal(Total),
       label = ~paste0 ('Total Violations : ' , Total),
       group = '2022',
@@ -412,16 +425,16 @@ server <- function(input, output,session){
       weight = 0.5,
       color = "black",
       stroke=TRUE ,
-      opacity = 1 ,
+      fillOpacity = 1 ,
       fillColor = ~nc_pal(Total),
       label = ~paste0 ('Total Violations : ' , Total),
       group = '2022',
       highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
       )%>%
       addLegend( pal=nc_pal, values= violations[[input$type]][[input$time2]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
-    
-    
     })
+    
+  
 }
 
 shinyApp(ui,server)
