@@ -1,6 +1,7 @@
 ---
 title: "R Notebook"
 output: html_notebook
+runtime: shiny
 ---
 
 
@@ -17,6 +18,9 @@ library(ggnewscale)
 library(RSocrata)
 library(rstudioapi)
 library(leaflet)
+library(shiny)
+library(bslib)
+library(RColorBrewer)
 #set working directory
 current_path <- rstudioapi::getActiveDocumentContext()$path
 setwd(dirname(current_path))
@@ -56,7 +60,7 @@ spdf_data <- tidy(  spdf_file,
 ```
 
 
-
+### Section II: interactive map
 
 ```{r}
 
@@ -115,36 +119,36 @@ Critical_2022_by_Code =
   summarize(Total = n())
 
 
-spdf_file_2022 = spdf_file
-spdf_file_2022@data =
-spdf_file_2022@data %>%
+Critical_spdf_file_2022 = spdf_file
+Critical_spdf_file_2022@data =
+Critical_spdf_file_2022@data %>%
                  left_join(Critical_2022_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
-spdf_file_2019 = spdf_file
-spdf_file_2019@data =
-spdf_file_2019@data %>%
+Critical_spdf_file_2019 = spdf_file
+Critical_spdf_file_2019@data =
+Critical_spdf_file_2019@data %>%
                  left_join(Critical_2019_by_Code, c("ZIPCODE"="zipcode"))
 
 
-spdf_file_2020 = spdf_file
-spdf_file_2020@data =
-spdf_file_2020@data %>%
+Critical_spdf_file_2020 = spdf_file
+Critical_spdf_file_2020@data =
+Critical_spdf_file_2020@data %>%
                  left_join(Critical_2020_by_Code, c("ZIPCODE"="zipcode"))
 
-spdf_file_2021 = spdf_file
-spdf_file_2021@data =
-spdf_file_2021@data %>%
+Critical_spdf_file_2021 = spdf_file
+Critical_spdf_file_2021@data =
+Critical_spdf_file_2021@data %>%
                  left_join(Critical_2021_by_Code, c("ZIPCODE"="zipcode"))
 
 
+critical_violations = list(Critical_spdf_file_2019,Critical_spdf_file_2020,Critical_spdf_file_2021,Critical_spdf_file_2022)
+names(critical_violations) <- c("2019","2020","2021","2022")
 
 
 
-
-
-nc_pal= colorNumeric(palette="YlOrBr", domain= spdf_file_2019@data$Total, na.color = 'transparent')
+nc_pal= colorNumeric(palette="YlOrBr", domain= Critical_spdf_file_2019@data$Total, na.color = 'transparent')
 
 
 
@@ -152,7 +156,7 @@ leaflet()%>%
   addProviderTiles("CartoDB")%>%
   #### First Layer of PolyGons
   addPolygons(
-    data = spdf_file_2022 ,
+    data = Critical_spdf_file_2022 ,
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
@@ -165,7 +169,7 @@ leaflet()%>%
   
   #### Second Layer of PolyGons
     addPolygons(
-    data = spdf_file_2021 ,
+    data = Critical_spdf_file_2021 ,
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
@@ -180,7 +184,7 @@ leaflet()%>%
   
   
   
-    addLegend( pal=nc_pal, values= spdf_file_2022$Total, opacity=0.9, title = "Critical", position = "bottomleft" )
+    addLegend( pal=nc_pal, values= Critical_spdf_file_2022$Total, opacity=0.9, title = "Critical", position = "bottomleft" )
     
 ```
 
@@ -225,43 +229,43 @@ Total_2022_by_Code =
 
 
 ##### Join datasets
-spdf_file_2022 = spdf_file
-spdf_file_2022@data =
-spdf_file_2022@data %>%
+Total_spdf_file_2022 = spdf_file
+Total_spdf_file_2022@data =
+Total_spdf_file_2022@data %>%
                  left_join(Total_2022_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
-spdf_file_2019 = spdf_file
-spdf_file_2019@data =
-spdf_file_2019@data %>%
+Total_spdf_file_2019 = spdf_file
+Total_spdf_file_2019@data =
+Total_spdf_file_2019@data %>%
                  left_join(Total_2019_by_Code, c("ZIPCODE"="zipcode"))
 
 
-spdf_file_2020 = spdf_file
-spdf_file_2020@data =
-spdf_file_2020@data %>%
+Total_spdf_file_2020 = spdf_file
+Total_spdf_file_2020@data =
+Total_spdf_file_2020@data %>%
                  left_join(Total_2020_by_Code, c("ZIPCODE"="zipcode"))
 
-spdf_file_2021 = spdf_file
-spdf_file_2021@data =
-spdf_file_2021@data %>%
+Total_spdf_file_2021 = spdf_file
+Total_spdf_file_2021@data =
+Total_spdf_file_2021@data %>%
                  left_join(Total_2021_by_Code, c("ZIPCODE"="zipcode"))
 
 
-
-
+total_violation <- list(Total_spdf_file_2019,Total_spdf_file_2020,Total_spdf_file_2021,Total_spdf_file_2022)
+names(total_violation) <- c("2019","2020","2021","2022")
 
 
 ##### colors
-nc_pal= colorNumeric(palette="YlOrBr", domain= spdf_file_2019@data$Total, na.color = 'transparent')
+nc_pal= colorNumeric(palette="YlOrBr", domain= Total_spdf_file_2019@data$Total, na.color = 'transparent')
 
 
 leaflet()%>%
   addProviderTiles("CartoDB")%>%
   #### First Layer of PolyGons
   addPolygons(
-    data = spdf_file_2022 ,
+    data = Total_spdf_file_2022 ,
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
@@ -274,7 +278,7 @@ leaflet()%>%
   
   #### Second Layer of PolyGons
     addPolygons(
-    data = spdf_file_2021 ,
+    data = Total_spdf_file_2021 ,
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
@@ -288,7 +292,7 @@ leaflet()%>%
   
   #####Third layer
     addPolygons(
-    data = spdf_file_2020 ,
+    data = Total_spdf_file_2020 ,
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
@@ -302,7 +306,7 @@ leaflet()%>%
   
   ####Fourth
     addPolygons(
-    data = spdf_file_2019 ,
+    data = Total_spdf_file_2019 ,
     weight = 0.5,
     color = "black",
     stroke=TRUE ,
@@ -315,12 +319,111 @@ leaflet()%>%
    
   
     addLayersControl(overlayGroups = c("2022", "2021",'2020', '2019'))%>%
-    addLegend( pal=nc_pal, values= spdf_file_2022$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+    addLegend( pal=nc_pal, values= Total_spdf_file_2022$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
 
-
-  
+violations <- list(total_violation,critical_violations)
+names(violations) <- c("Number of Total Violations","Number of Crital Violations")
 
 ```
 
 
 
+
+
+
+
+### Section III: Rshiny App
+
+
+```{r}
+nc_pal= colorNumeric(palette="YlOrBr", domain= Total_spdf_file_2019@data$Total,na.color = 'transparent')
+ui <- navbarPage(
+ theme = bs_theme(bootswatch = "litera"),
+  "Food Inspectation",
+  tabPanel("Static Plots"),
+ 
+  navbarMenu("Interactive Plots",
+             tabPanel("Interactive Map",
+           fluidRow(column(6,selectInput("type","Type of Violations:",
+                                    c("Number of Total Violations",
+                                      "Number of Crital Violations"))),
+                    column(6,selectInput("time","Year:",
+                                    c("2019","2020","2021","2022")))),
+          fluidRow(leafletOutput("map",height = 1000))),
+          
+          
+            tabPanel("Comparison between Years",
+                      fluidRow(column(4,selectInput("type_comp","Type of Violations:",
+                                    c("Number of Total Violations",
+                                      "Number of Crital Violations"))),
+                    column(4,selectInput("time1","Year:",
+                                    c("2019","2020","2021","2022"))),
+                    column(4,selectInput("time2","Year:",
+                                    c("2019","2020","2021","2022"),selected = "2020"))),
+                    fluidRow(column(6,leafletOutput("map_comp1",height=600)), column(6,leafletOutput("map_comp2",height=600))))),
+ 
+  tabPanel("Reference")
+)
+server <- function(input, output,session){
+  #interactive map
+  output$map <- renderLeaflet({
+    leaflet()%>%
+  addProviderTiles("CartoDB")%>%
+  #### First Layer of PolyGons
+  addPolygons(
+    data = violations[[input$type]][[input$time]],
+    weight = 0.5,
+    color = "black",
+    stroke=TRUE ,
+    opacity = 1 ,
+    fillColor = ~nc_pal(Total),
+    label = ~paste0 ('Total Violations : ' , Total),
+    group = '2022',
+    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
+    )%>%
+    addLegend( pal=nc_pal, values= violations[[input$type]][[input$time]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+    })
+  
+  
+  
+  
+#interactive map compared by year  
+    output$map_comp1 <- renderLeaflet({
+      leaflet()%>%
+      addProviderTiles("CartoDB")%>%
+      addPolygons(
+      data = violations[[input$type_comp]][[input$time1]],
+      weight = 0.5,
+      color = "black",
+      stroke=TRUE ,
+      opacity = 1 ,
+      fillColor = ~nc_pal(Total),
+      label = ~paste0 ('Total Violations : ' , Total),
+      group = '2022',
+      highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
+      )%>%
+      addLegend( pal=nc_pal, values= violations[[input$type]][[input$time1]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+    })
+    output$map_comp2 <- renderLeaflet({
+      leaflet()%>%
+      addProviderTiles("CartoDB")%>%
+      addPolygons(
+      data = violations[[input$type_comp]][[input$time2]],
+      weight = 0.5,
+      color = "black",
+      stroke=TRUE ,
+      opacity = 1 ,
+      fillColor = ~nc_pal(Total),
+      label = ~paste0 ('Total Violations : ' , Total),
+      group = '2022',
+      highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
+      )%>%
+      addLegend( pal=nc_pal, values= violations[[input$type]][[input$time2]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+    
+    
+    })
+}
+
+shinyApp(ui,server)
+
+```
