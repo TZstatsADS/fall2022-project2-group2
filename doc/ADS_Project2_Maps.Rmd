@@ -311,6 +311,56 @@ gradeInfo$latitude <- as.numeric(gradeInfo$latitude)
 gradeInfo$longitude <- as.numeric(gradeInfo$longitude)
 ```
 
+
+#### score visualization
+```{r}
+df$score <- as.numeric(df$score)
+score_total <- df %>%
+  filter(!is.na(score))%>%
+  group_by(zipcode)%>%
+  summarise(mean_score = mean(score))
+
+score_2019 <- df%>%
+  filter(!is.na(score)&year==2019)%>%
+  group_by(zipcode)%>%
+  summarise(mean_score = mean(score))
+
+score_2020 <- df%>%
+  filter(!is.na(score)&year==2020)%>%
+  group_by(zipcode)%>%
+  summarise(mean_score = mean(score))
+
+score_2021 <- df%>%
+  filter(!is.na(score)&year==2021)%>%
+  group_by(zipcode)%>%
+  summarise(mean_score = mean(score))
+
+score_2022 <- df%>%
+  filter(!is.na(score)&year==2022)%>%
+  group_by(zipcode)%>%
+  summarise(mean_score = mean(score))
+
+Score_spdf_file_2019 <- spdf_file
+Score_spdf_file_2019@data <- Score_spdf_file_2019@data %>%
+  left_join(score_2019, c("ZIPCODE" = "zipcode"))
+
+Score_spdf_file_2020 <- spdf_file
+Score_spdf_file_2020@data <- Score_spdf_file_2020@data %>%
+  left_join(score_2020, c("ZIPCODE" = "zipcode"))
+
+Score_spdf_file_2021 <- spdf_file
+Score_spdf_file_2021@data <- Score_spdf_file_2021@data %>%
+  left_join(score_2021, c("ZIPCODE" = "zipcode"))
+
+Score_spdf_file_2022 <- spdf_file
+Score_spdf_file_2022@data <- Score_spdf_file_2022@data %>%
+  left_join(score_2022, c("ZIPCODE" = "zipcode"))
+
+score_map <- list(Score_spdf_file_2019,Score_spdf_file_2020,Score_spdf_file_2021,Score_spdf_file_2022)
+names(score_map) <- c("2019","2020","2021","2022")
+```
+
+
 # Section III: Shiny app
 
 ```{r}
@@ -335,20 +385,20 @@ ui <- navbarPage(
       )
     )
   ),
-    
-  tabPanel("Interactive Map",
+  navbarMenu("Violations Visualization",
+            tabPanel("Violations Map",
     fluidRow(
       column(3,
         selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Crital Violations")),
         selectInput("time", "Year", c("2019", "2020", "2021", "2022"))
       ),
       column(9,
-        leafletOutput("map", height = 1000)
+        leafletOutput("map", height = 600)
       )
     )
   ),
     
-  tabPanel("Comparison",
+  tabPanel("Comparison by Years",
     fluidRow(
       column(4,
         selectInput("type_comp", "Type of Violations", c("Number of Total Violations", "Number of Crital Violations"))
@@ -369,8 +419,12 @@ ui <- navbarPage(
         leafletOutput("map_comp2", height = 600)
       )
     )
-  ),
-  
+  )),
+  tabPanel("Inspection Score Visualization",
+           column(3,
+                  selectInput("score_year","Year:", c("2019", "2020", "2021", "2022"))),
+           column(9, leafletOutput("score_map", height=600))),
+ 
   tabPanel("Reference")
 )
 
@@ -467,7 +521,7 @@ server <- function(input, output,session){
       weight = 0.5,
       color = "black",
       stroke = TRUE,
-      opacity = 1,
+      fillOpacity = 1,
       fillColor = ~nc_pal(Total),
       label = ~paste0 ('Total Violations : ', Total),
       group = '2022',
@@ -511,6 +565,25 @@ server <- function(input, output,session){
       highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
     ) %>%
     addLegend(pal = nc_pal, values = violations[[input$type]][[input$time2]]$Total, opacity = 0.9, title = "Count of Total Violation", position = "bottomleft" )
+  })
+  
+  # Interactive score map
+  output$score_map <- renderLeaflet({
+    nc_pal <- colorNumeric(palette ="Greens", domain = score_map[[3]]@data$mean_score, na.color = 'transparent')
+    leaflet() %>%
+    addProviderTiles("CartoDB") %>%
+    addPolygons(
+      data = score_map[[input$score_year]],
+      weight = 0.5,
+      color = "black",
+      stroke = TRUE,
+      fillOpacity = 1,
+      fillColor = ~nc_pal(mean_score),
+      label = ~paste0 ('Mean Inspection Score: ', mean_score),
+      group = '2022',
+      highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
+    ) %>%
+    addLegend(pal = nc_pal, values = score_map[[input$score_year]]$mean_score, opacity = 0.9, title = "Mean Score", position = "bottomleft" )
   })
 }
 
