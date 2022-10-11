@@ -62,6 +62,7 @@ if (!require("tidyverse")) {
 if (!require("wesanderson")) {
   install.packages("wesanderson")
   library(wesanderson)}
+
 if (!require("bslib")) {
   install.packages("bslib")
   library(bslib)}
