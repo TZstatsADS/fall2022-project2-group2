@@ -62,7 +62,6 @@ if (!require("tidyverse")) {
 if (!require("wesanderson")) {
   install.packages("wesanderson")
   library(wesanderson)}
-
 if (!require("bslib")) {
   install.packages("bslib")
   library(bslib)}
@@ -84,21 +83,23 @@ getwd()
 #data preparation
 borough_list <- readRDS("../data/borough_list.Rda")
 cuisine_list <- readRDS("../data/cuisine_list.Rda")
-  
+
 #==============================================Shiny UI=================================================
 # Define UI for application that display food inspections result visualization
 ui <- navbarPage(
   theme = bs_theme(bootswatch = "litera"), 
-  "Restaurant Inspectation",
-  ######## tab 1 Introduction #######
+  "Restaurant Inspection",
+  # Tab 1: Introduction
   tabPanel("Introduction",
            tags$img(
              src = "https://cdn.vox-cdn.com/thumbor/ZfB51FGxZnbt6YrmvVJqgXnSaRI=/0x0:4200x2800/1820x1213/filters:focal(1764x1064:2436x1736):format(webp)/cdn.vox-cdn.com/uploads/chorus_image/image/67220269/shutterstock_406742713.0.jpg",
              width = "100%",
              style = "opacity: 0.90"
-           )),
-  ######## tab2 Filter Plots ########
-  tabPanel("Filtered Plots",
+           )
+  ),
+  
+  # Tab 2: Violation Trend
+  tabPanel("Violation Trend",
            fluidRow(
              column(3,
                     selectInput("borough", "Borough", borough_list[!borough_list %in% c("0")], selected = "Overall"),
@@ -111,10 +112,11 @@ ui <- navbarPage(
              )
            )
   ),
-  ######### tab3 Violation Visualization #######
-  navbarMenu("Violations Visualization",
-             ###### subtab 3.1 Violation Map #######
-             tabPanel("Violations Map",
+  
+  # Tab 3: Violation Map
+  navbarMenu("Violation Map",
+             # Subtab 3.1: Number of Violations
+             tabPanel("Number of Violations",
                       fluidRow(
                         column(3,
                                selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Crital Violations"))
@@ -124,35 +126,43 @@ ui <- navbarPage(
                         )
                       )
              ),
-             ######subtab 3.2 Comparison of Violations by Years ######
-             tabPanel("Comparison by Years",
+             
+             # Subtab 3.2:Inspection Score
+             tabPanel("Inspection Score",
                       fluidRow(
-                        column(4,
-                               selectInput("type_comp", "Type of Violations", c("Number of Total Violations", "Number of Crital Violations"))
-                        ),
-                        column(4,
-                               selectInput("time1", "Year", c("2019", "2020", "2021", "2022"))
-                        ),
-                        column(4,
-                               selectInput("time2", "Year", c("2019", "2020", "2021", "2022"), selected = "2020")
-                        )
-                      ),
-                      
-                      fluidRow(
-                        column(6,
-                               leafletOutput("map_comp1", height = 600)
-                        ),
-                        column(6,
-                               leafletOutput("map_comp2", height = 600)
-                        )
+                        column(3,
+                               selectInput("score_year","Year:", c("2019", "2020", "2021", "2022"))),
+                        column(9,
+                               leafletOutput("score_map", height=600))
                       )
-             )),
-  ######### tab 4 Inspection Score Visualization #########
-  tabPanel("Inspection Score Visualization",
-           fluidRow(column(3,
-                           selectInput("score_year","Year:", c("2019", "2020", "2021", "2022"))),
-                    column(9, leafletOutput("score_map", height=600)))),
-  ######### tab 5 References ##############
+             )
+  ),
+  
+  # Tab 4: Comparison by Years
+  tabPanel("Comparison by Years",
+           fluidRow(
+             column(4,
+                    selectInput("type_comp", "Type of Violations", c("Number of Total Violations", "Number of Crital Violations"))
+             ),
+             column(4,
+                    selectInput("time1", "Year", c("2019", "2020", "2021", "2022"))
+             ),
+             column(4,
+                    selectInput("time2", "Year", c("2019", "2020", "2021", "2022"), selected = "2020")
+             )
+           ),
+           
+           fluidRow(
+             column(6,
+                    leafletOutput("map_comp1", height = 600)
+             ),
+             column(6,
+                    leafletOutput("map_comp2", height = 600)
+             )
+           )
+  ),
+  
+  # Tab 5: References
   tabPanel("Reference")
 )
 
@@ -315,9 +325,8 @@ server <- function(input, output) {
       ) %>%
       addLegend(pal = nc_pal, values = score_map[[input$score_year]]$mean_score, opacity = 0.9, title = "Mean Score", position = "bottomleft" )
   })
- 
+  
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
