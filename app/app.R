@@ -62,7 +62,9 @@ if (!require("tidyverse")) {
 if (!require("wesanderson")) {
   install.packages("wesanderson")
   library(wesanderson)}
-
+if (!require("bslib")) {
+  install.packages("bslib")
+  library(bslib)}
 #data preparation
 borough_list <- readRDS("../data/borough_list.Rda")
 cuisine_list <- readRDS("../data/cuisine_list.Rda")
