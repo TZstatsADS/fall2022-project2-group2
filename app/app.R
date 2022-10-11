@@ -66,6 +66,15 @@ if (!require("bslib")) {
   install.packages("bslib")
   library(bslib)}
 
+if (!require("leaflet.extras")) {
+  install.packages("leaflet.extras")
+  library(leaflet.extras)}
+
+if (!require("htmltools")) {
+  install.packages("htmltools")
+  library(htmltools)}
+
+
 # Set working directory
 current_path <- rstudioapi::getActiveDocumentContext()$path
 setwd(dirname(current_path))
