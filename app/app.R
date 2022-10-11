@@ -65,6 +65,12 @@ if (!require("wesanderson")) {
 if (!require("bslib")) {
   install.packages("bslib")
   library(bslib)}
+
+# Set working directory
+current_path <- rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+getwd()
+
 #data preparation
 borough_list <- readRDS("../data/borough_list.Rda")
 cuisine_list <- readRDS("../data/cuisine_list.Rda")
@@ -75,7 +81,12 @@ ui <- navbarPage(
   theme = bs_theme(bootswatch = "litera"), 
   "Restaurant Inspectation",
   ######## tab 1 Introduction #######
-  tabPanel("Introduction"),
+  tabPanel("Introduction",
+           tags$img(
+             src = "https://cdn.vox-cdn.com/thumbor/ZfB51FGxZnbt6YrmvVJqgXnSaRI=/0x0:4200x2800/1820x1213/filters:focal(1764x1064:2436x1736):format(webp)/cdn.vox-cdn.com/uploads/chorus_image/image/67220269/shutterstock_406742713.0.jpg",
+             width = "100%",
+             style = "opacity: 0.90"
+           )),
   ######## tab2 Filter Plots ########
   tabPanel("Filtered Plots",
            fluidRow(
