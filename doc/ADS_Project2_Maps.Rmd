@@ -324,21 +324,26 @@ score_2019 <- df%>%
   filter(!is.na(score)&year==2019)%>%
   group_by(zipcode)%>%
   summarise(mean_score = mean(score))
+score_2019$mean_score <- round(score_2019$mean_score,2)
 
 score_2020 <- df%>%
   filter(!is.na(score)&year==2020)%>%
   group_by(zipcode)%>%
   summarise(mean_score = mean(score))
+score_2020$mean_score <- round(score_2020$mean_score,2)
 
 score_2021 <- df%>%
   filter(!is.na(score)&year==2021)%>%
   group_by(zipcode)%>%
   summarise(mean_score = mean(score))
+score_2021$mean_score <- round(score_2021$mean_score,2)
 
 score_2022 <- df%>%
   filter(!is.na(score)&year==2022)%>%
   group_by(zipcode)%>%
   summarise(mean_score = mean(score))
+score_2022$mean_score <- round(score_2022$mean_score,2)
+
 
 Score_spdf_file_2019 <- spdf_file
 Score_spdf_file_2019@data <- Score_spdf_file_2019@data %>%
@@ -421,9 +426,9 @@ ui <- navbarPage(
     )
   )),
   tabPanel("Inspection Score Visualization",
-           column(3,
+           fluidRow(column(3,
                   selectInput("score_year","Year:", c("2019", "2020", "2021", "2022"))),
-           column(9, leafletOutput("score_map", height=600))),
+           column(9, leafletOutput("score_map", height=600)))),
  
   tabPanel("Reference")
 )
