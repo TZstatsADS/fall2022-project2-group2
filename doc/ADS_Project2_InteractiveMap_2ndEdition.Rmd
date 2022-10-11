@@ -15,27 +15,37 @@ library(ggplot2)
 library(dplyr)
 library(ggnewscale)
 library(leaflet.extras)
+library(RSocrata)
+library(htmltools)
 ```
 
 
 ```{r}
-#### Load the Restaurant dataset
-data = read.csv("DOHMH_New_York_City_Restaurant_Inspection_Results.csv")
-data$year <- format(as.Date(data$INSPECTION.DATE, format="%d/%m/%Y"),"%Y") ## Extract Years
+# Set working directory
+current_path <- rstudioapi::getActiveDocumentContext()$path
+setwd(dirname(current_path))
+getwd()
 
+# Load the restaurant dataset
+data <- read.socrata(
+  "https://data.cityofnewyork.us/resource/43nn-pn8j.json",
+  app_token = "zTRehp1897SQtpYtBiIOUMfR4"
+)
 ###filter the dataset
+data$year <- format(data$inspection_date,"%Y")
 df =
   data %>%
-  filter(data$year >= 2019 & ZIPCODE!="" & DBA != "") %>%
-  mutate(GRADE=replace(GRADE, GRADE == "", NA))
-
+  filter(data$year >= 2019 & zipcode!="" & dba != "") %>%
+  mutate(grade=replace(grade, grade == "", NA))
+df$latitude <- as.numeric(df$latitude)
+df$longitude <- as.numeric(df$longitude)
 head(df)
 ```
 
 
 ```{r}
 # Read the geojson file containing Spatial Info
-spdf_file <- geojson_read(   "zip_code_040114.geojson", what = "sp")
+spdf_file <- geojson_read(   "../data/zip_code_040114.geojson", what = "sp")
 
 stats_df = spdf_file@data
 
@@ -50,17 +60,17 @@ spdf_data <- tidy(  spdf_file,
 ### Grade info for each type of restaurant
 grades =
   df %>% 
-  group_by(DBA, Latitude, Longitude) %>%   ##windows function partition by DBA, Lat, and Long
-  mutate(rowNum = row_number(desc(INSPECTION.DATE))) %>% #specify how to list row numbers here; desc for latest first.
+  group_by(dba, latitude, longitude) %>%   ##windows function partition by DBA, Lat, and Long
+  mutate(rowNum = row_number(desc(inspection_date))) %>% #specify how to list row numbers here; desc for latest first.
   filter(rowNum == 1)%>%
-  drop_na(Longitude)%>% 
+  drop_na(longitude)%>% 
   mutate(CUISINE.TYPE = 
-           case_when(CUISINE.DESCRIPTION == "American" ~ "American", 
-                     CUISINE.DESCRIPTION == "Chinese" ~ "Chinese",
-                     CUISINE.DESCRIPTION == "Coffee/Tea" ~ "Coffee", 
-                     CUISINE.DESCRIPTION == "Pizza" ~ "Pizza",
-                     CUISINE.DESCRIPTION == "Italian" ~ "Italian", 
-                     CUISINE.DESCRIPTION == "Mexican" ~ "Mexican",
+           case_when(cuisine_description == "American" ~ "American", 
+                     cuisine_description == "Chinese" ~ "Chinese",
+                     cuisine_description == "Coffee/Tea" ~ "Coffee", 
+                     cuisine_description == "Pizza" ~ "Pizza",
+                     cuisine_description == "Italian" ~ "Italian", 
+                     cuisine_description == "Mexican" ~ "Mexican",
                      TRUE ~ "Others"))
 
 American = 
@@ -119,58 +129,58 @@ ggplot() +
 #### Number of restaurant per ZIPCODE
 Num_Rest_Code =
   df%>%
-  group_by(ZIPCODE, DBA, Latitude, Longitude)%>%
+  group_by(zipcode, dba, latitude, longitude)%>%
   count() %>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   count()
 
 Critical_2019_by_Code = 
   df%>%
   filter(year == 2019)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Critical_2020_by_Code = 
   df%>%
   filter(year == 2020)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Critical_2021_by_Code = 
   df%>%
   filter(year == 2021)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Critical_2022_by_Code = 
   df%>%
   filter(year == 2022)%>%
-  group_by(ZIPCODE)%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
 
 
 spdf_file_2022 = spdf_file
 spdf_file_2022@data =
 spdf_file_2022@data %>%
-                 left_join(Critical_2022_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2022_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
 spdf_file_2019 = spdf_file
 spdf_file_2019@data =
 spdf_file_2019@data %>%
-                 left_join(Critical_2019_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2019_by_Code, c("ZIPCODE"="zipcode"))
 
 
 spdf_file_2020 = spdf_file
 spdf_file_2020@data =
 spdf_file_2020@data %>%
-                 left_join(Critical_2020_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2020_by_Code, c("ZIPCODE"="zipcode"))
 
 spdf_file_2021 = spdf_file
 spdf_file_2021@data =
 spdf_file_2021@data %>%
-                 left_join(Critical_2021_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Critical_2021_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
@@ -178,7 +188,7 @@ spdf_file_2021@data %>%
 
 
 
-nc_pal= colorNumeric(palette="YlOrBr", domain= spdf_file_2019@data$Total, na.color = 'transparent')
+nc_pal= colorNumeric(palette="YlOrBr", domain= spdf_file_2022@data$Total, na.color = 'transparent')
 
 
 Critical_Violation_Map=
@@ -243,81 +253,81 @@ leaflet()%>%
   
    ##### layer of grades of restaurnts
   
-  addMarkers(data = American,lng = ~Longitude, lat = ~Latitude, 
+  addMarkers(data = American,lng = ~longitude, lat = ~latitude, 
                   
-                   label = ~htmlEscape(DBA),
+                   label = ~htmlEscape(dba),
                    group = 'American',
-                   popup  = paste0("<b>",American$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', American$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', American$PHONE,
-                                   "<br/>", 'Grade: ', American$GRADE,
-                                  "<br/>",'Latest Violation: ', American$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",American$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', American$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', American$phone,
+                                   "<br/>", 'Grade: ', American$grade,
+                                  "<br/>",'Latest Violation: ', American$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
-   addMarkers(data = Chinese,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+   addMarkers(data = Chinese,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Chinese',
-                   popup  = paste0("<b>",Chinese$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Chinese$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Chinese$PHONE,
-                                   "<br/>", 'Grade: ', Chinese$GRADE,
-                                  "<br/>",'Latest Violation: ', Chinese$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Chinese$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Chinese$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Chinese$phone,
+                                   "<br/>", 'Grade: ', Chinese$grade,
+                                  "<br/>",'Latest Violation: ', Chinese$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
-   addMarkers(data = Pizza,lng = ~Longitude, lat = ~Latitude, 
+   addMarkers(data = Pizza,lng = ~longitude, lat = ~latitude, 
               
-                   label = ~htmlEscape(DBA),
+                   label = ~htmlEscape(dba),
                    group = 'Pizza',
-                   popup  = paste0("<b>",Pizza$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Pizza$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Pizza$PHONE,
-                                   "<br/>", 'Grade: ', Pizza$GRADE,
-                                  "<br/>",'Latest Violation: ', Pizza$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Pizza$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Pizza$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Pizza$phone,
+                                   "<br/>", 'Grade: ', Pizza$grade,
+                                  "<br/>",'Latest Violation: ', Pizza$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
    
-   addMarkers(data = Mexican,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+   addMarkers(data = Mexican,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Mexican',
-                   popup  = paste0("<b>",Mexican$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Mexican$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Mexican$PHONE,
-                                   "<br/>", 'Grade: ', Mexican$GRADE,
-                                  "<br/>",'Latest Violation: ', Mexican$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Mexican$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Mexican$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Mexican$phone,
+                                   "<br/>", 'Grade: ', Mexican$grade,
+                                  "<br/>",'Latest Violation: ', Mexican$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
   
-   addMarkers(data = Italian,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+   addMarkers(data = Italian,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Italian',
-                   popup  = paste0("<b>",Italian$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Italian$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Italian$PHONE,
-                                   "<br/>", 'Grade: ', Italian$GRADE,
-                                  "<br/>",'Latest Violation: ', Italian$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Italian$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Italian$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Italian$phone,
+                                   "<br/>", 'Grade: ', Italian$grade,
+                                  "<br/>",'Latest Violation: ', Italian$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
-  addMarkers(data = Coffee,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+  addMarkers(data = Coffee,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Coffee',
-                   popup  = paste0("<b>",Coffee$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Coffee$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Coffee$PHONE,
-                                   "<br/>", 'Grade: ', Coffee$GRADE,
-                                  "<br/>",'Latest Violation: ', Coffee$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Coffee$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Coffee$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Coffee$phone,
+                                   "<br/>", 'Grade: ', Coffee$grade,
+                                  "<br/>",'Latest Violation: ', Coffee$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
-  addMarkers(data = Others,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+  addMarkers(data = Others,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Others',
-                   popup  = paste0("<b>",Others$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Others$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Others$PHONE,
-                                   "<br/>", 'Grade: ', Others$GRADE,
-                                  "<br/>",'Latest Violation: ', Others$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Others$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Others$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Others$phone,
+                                   "<br/>", 'Grade: ', Others$grade,
+                                  "<br/>",'Latest Violation: ', Others$violation_description),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
@@ -326,7 +336,7 @@ leaflet()%>%
   addLegend( pal=nc_pal, values= spdf_file_2022$Total, opacity=0.9, title = "Critical Violation Counts", position = "bottomleft" )
 
 Critical_Violation_Map
-    
+saveRDS(Critical_Violation_Map,file="../lib/critical_cluster.Rda")
 ```
 
 
@@ -337,26 +347,26 @@ Critical_Violation_Map
 ```{r}
 Total_2019_by_Code = 
   df%>%
-  filter(year == 2019 & CRITICAL.FLAG %in% c('Critical', 'Not Critical'))%>%
-  group_by(ZIPCODE)%>%
+  filter(year == 2019 & critical_flag %in% c('Critical', 'Not Critical'))%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Total_2020_by_Code = 
   df%>%
-  filter(year == 2020 & CRITICAL.FLAG %in% c('Critical', 'Not Critical'))%>%
-  group_by(ZIPCODE)%>%
+  filter(year == 2020 & critical_flag %in% c('Critical', 'Not Critical'))%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Total_2021_by_Code = 
   df%>%
-  filter(year == 2021 & CRITICAL.FLAG %in% c('Critical', 'Not Critical'))%>%
-  group_by(ZIPCODE)%>%
+  filter(year == 2021 & critical_flag %in% c('Critical', 'Not Critical'))%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
   
 Total_2022_by_Code = 
   df%>%
-  filter(year == 2022 & CRITICAL.FLAG %in% c('Critical', 'Not Critical'))%>%
-  group_by(ZIPCODE)%>%
+  filter(year == 2022 & critical_flag %in% c('Critical', 'Not Critical'))%>%
+  group_by(zipcode)%>%
   summarize(Total = n())
 
 
@@ -367,25 +377,25 @@ Total_2022_by_Code =
 spdf_file_2022 = spdf_file
 spdf_file_2022@data =
 spdf_file_2022@data %>%
-                 left_join(Total_2022_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2022_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
 spdf_file_2019 = spdf_file
 spdf_file_2019@data =
 spdf_file_2019@data %>%
-                 left_join(Total_2019_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2019_by_Code, c("ZIPCODE"="zipcode"))
 
 
 spdf_file_2020 = spdf_file
 spdf_file_2020@data =
 spdf_file_2020@data %>%
-                 left_join(Total_2020_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2020_by_Code, c("ZIPCODE"="zipcode"))
 
 spdf_file_2021 = spdf_file
 spdf_file_2021@data =
 spdf_file_2021@data %>%
-                 left_join(Total_2021_by_Code, c("ZIPCODE"="ZIPCODE"))
+                 left_join(Total_2021_by_Code, c("ZIPCODE"="zipcode"))
 
 
 
@@ -464,81 +474,81 @@ leaflet()%>%
   
 
   
-  addMarkers(data = American,lng = ~Longitude, lat = ~Latitude, 
+  addMarkers(data = American,lng = ~longitude, lat = ~latitude, 
                   
-                   label = ~htmlEscape(DBA),
+                   label = ~htmlEscape(dba),
                    group = 'American',
-                   popup  = paste0("<b>",American$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', American$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', American$PHONE,
-                                   "<br/>", 'Grade: ', American$GRADE,
-                                  "<br/>",'Latest Violation: ', American$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",American$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', American$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', American$phone,
+                                   "<br/>", 'Grade: ', American$grade,
+                                  "<br/>",'Latest Violation: ', American$violation_description),
                   clusterOptions = markerClusterOptions()
              ) %>% 
-   addMarkers(data = Chinese,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+   addMarkers(data = Chinese,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Chinese',
-                   popup  = paste0("<b>",Chinese$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Chinese$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Chinese$PHONE,
-                                   "<br/>", 'Grade: ', Chinese$GRADE,
-                                  "<br/>",'Latest Violation: ', Chinese$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Chinese$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Chinese$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Chinese$phone,
+                                   "<br/>", 'Grade: ', Chinese$grade,
+                                  "<br/>",'Latest Violation: ', Chinese$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
-   addMarkers(data = Pizza,lng = ~Longitude, lat = ~Latitude, 
+   addMarkers(data = Pizza,lng = ~longitude, lat = ~latitude, 
               
-                   label = ~htmlEscape(DBA),
+                   label = ~htmlEscape(dba),
                    group = 'Pizza',
-                   popup  = paste0("<b>",Pizza$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Pizza$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Pizza$PHONE,
-                                   "<br/>", 'Grade: ', Pizza$GRADE,
-                                  "<br/>",'Latest Violation: ', Pizza$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Pizza$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Pizza$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Pizza$phone,
+                                   "<br/>", 'Grade: ', Pizza$grade,
+                                  "<br/>",'Latest Violation: ', Pizza$violation_description),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
    
-   addMarkers(data = Mexican,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+   addMarkers(data = Mexican,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Mexican',
-                   popup  = paste0("<b>",Mexican$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Mexican$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Mexican$PHONE,
-                                   "<br/>", 'Grade: ', Mexican$GRADE,
-                                  "<br/>",'Latest Violation: ', Mexican$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Mexican$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Mexican$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Mexican$phone,
+                                   "<br/>", 'Grade: ', Mexican$grade,
+                                  "<br/>",'Latest Violation: ', Mexican$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
   
-   addMarkers(data = Italian,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+   addMarkers(data = Italian,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Italian',
-                   popup  = paste0("<b>",Italian$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Italian$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Italian$PHONE,
-                                   "<br/>", 'Grade: ', Italian$GRADE,
-                                  "<br/>",'Latest Violation: ', Italian$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Italian$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Italian$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Italian$phone,
+                                   "<br/>", 'Grade: ', Italian$grade,
+                                  "<br/>",'Latest Violation: ', Italian$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
-  addMarkers(data = Coffee,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+  addMarkers(data = Coffee,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Coffee',
-                   popup  = paste0("<b>",Coffee$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Coffee$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Coffee$PHONE,
-                                   "<br/>", 'Grade: ', Coffee$GRADE,
-                                  "<br/>",'Latest Violation: ', Coffee$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Coffee$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Coffee$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Coffee$phone,
+                                   "<br/>", 'Grade: ', Coffee$grade,
+                                  "<br/>",'Latest Violation: ', Coffee$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
-  addMarkers(data = Others,lng = ~Longitude, lat = ~Latitude, 
-                   label = ~htmlEscape(DBA),
+  addMarkers(data = Others,lng = ~longitude, lat = ~latitude, 
+                   label = ~htmlEscape(dba),
                    group = 'Others',
-                   popup  = paste0("<b>",Others$DBA,"</b>", 
-                                   "<br/>", 'Cuisine Type: ', Others$CUISINE.DESCRIPTION, 
-                                   "<br/>", 'Phone Number: ', Others$PHONE,
-                                   "<br/>", 'Grade: ', Others$GRADE,
-                                  "<br/>",'Latest Violation: ', Others$VIOLATION.DESCRIPTION ),
+                   popup  = paste0("<b>",Others$dba,"</b>", 
+                                   "<br/>", 'Cuisine Type: ', Others$cuisine_description, 
+                                   "<br/>", 'Phone Number: ', Others$phone,
+                                   "<br/>", 'Grade: ', Others$grade,
+                                  "<br/>",'Latest Violation: ', Others$violation_description ),
                   clusterOptions = markerClusterOptions()
              ) %>% 
   
@@ -547,6 +557,7 @@ leaflet()%>%
   addLegend( pal=nc_pal, values= spdf_file_2022$Total, opacity=0.9, title = "Total Violation Counts", position = "bottomleft" )
 
 Total_Violation_Map
+saveRDS(Total_Violation_Map,file="../lib/total_cluster.Rda")
 ```
 
 

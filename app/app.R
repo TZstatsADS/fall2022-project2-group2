@@ -96,8 +96,7 @@ ui <- navbarPage(
              tabPanel("Violations Map",
                       fluidRow(
                         column(3,
-                               selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Crital Violations")),
-                               selectInput("time", "Year", c("2019", "2020", "2021", "2022"))
+                               selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Crital Violations"))
                         ),
                         column(9,
                                leafletOutput("map", height = 600)
@@ -143,6 +142,10 @@ server <- function(input, output) {
   violations <- readRDS("../data/violations.Rda")
   score_map <- readRDS("../data/score_map.Rda")
   df <- readRDS("../data/df.Rda")
+  critical_cluster_map <- readRDS("../lib/critical_cluster.Rda")
+  total_cluster_map <- readRDS("../lib/total_cluster.Rda")
+  cluster_map <- list(critical_cluster_map,total_cluster_map)
+  names(cluster_map) <- c("Number of Total Violations", "Number of Crital Violations")
   
   # Filtered plots
   output$plot_action <- renderPlot({
@@ -233,20 +236,7 @@ server <- function(input, output) {
   #violation map
   nc_pal <- colorNumeric(palette ="YlOrBr", domain = violations[[1]][[4]]@data$Total, na.color = 'transparent')
   output$map <- renderLeaflet({
-    leaflet() %>%
-      addProviderTiles("CartoDB") %>%
-      addPolygons(
-        data = violations[[input$type]][[input$time]],
-        weight = 0.5,
-        color = "black",
-        stroke = TRUE,
-        fillOpacity = 1,
-        fillColor = ~nc_pal(Total),
-        label = ~paste0 ('Total Violations : ', Total),
-        group = '2022',
-        highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
-      ) %>%
-      addLegend(pal = nc_pal, values = violations[[input$type]][[input$time]]$Total, opacity = 0.9, title = "Count of Total Violation", position = "bottomleft" )
+    cluster_map[[input$type]]
   })
   
   # Interactive map compared by year  
