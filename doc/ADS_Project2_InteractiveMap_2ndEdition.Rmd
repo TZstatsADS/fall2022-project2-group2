@@ -402,7 +402,6 @@ leaflet()%>%
   addProviderTiles("CartoDB")%>%
   setView(lng= -73.95223 , lat =40.78410	 , zoom = 10)%>%
   addSearchOSM()%>%
-  addReverseSearchOSM()%>%
   #### First Layer of PolyGons
   addPolygons(
     data = spdf_file_2022 ,
