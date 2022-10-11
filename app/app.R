@@ -81,8 +81,8 @@ setwd(dirname(current_path))
 getwd()
 
 #data preparation
-borough_list <- readRDS("../data/borough_list.Rda")
-cuisine_list <- readRDS("../data/cuisine_list.Rda")
+borough_list <- readRDS("../output/borough_list.Rda")
+cuisine_list <- readRDS("../output/cuisine_list.Rda")
 
 #==============================================Shiny UI=================================================
 # Define UI for application that display food inspections result visualization
@@ -170,11 +170,11 @@ ui <- navbarPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   #import pre-processed data
-  violations <- readRDS("../data/violations.Rda")
-  score_map <- readRDS("../data/score_map.Rda")
-  df <- readRDS("../data/df.Rda")
-  critical_cluster_map <- readRDS("../lib/critical_cluster.Rda")
-  total_cluster_map <- readRDS("../lib/total_cluster.Rda")
+  violations <- readRDS("../output/violations.Rda")
+  score_map <- readRDS("../output/score_map.Rda")
+  df <- readRDS("../output/df.Rda")
+  critical_cluster_map <- readRDS("../output/critical_cluster.Rda")
+  total_cluster_map <- readRDS("../output/total_cluster.Rda")
   cluster_map <- list(critical_cluster_map,total_cluster_map)
   names(cluster_map) <- c("Number of Total Violations", "Number of Crital Violations")
   
