@@ -49,7 +49,7 @@ if (!require("RSocrata")) {
 
 if (!require("rstudioapi")) {
   install.packages("rstudioapi")
-  library(rstuioapi)}
+  library(rstudioapi)}
 
 if (!require("sf")) {
   install.packages("sf")
@@ -76,13 +76,13 @@ if (!require("htmltools")) {
 
 
 # Set working directory
-current_path <- rstudioapi::getActiveDocumentContext()$path
-setwd(dirname(current_path))
-getwd()
+#current_path <- rstudioapi::getActiveDocumentContext()$path
+#setwd(dirname(current_path))
+#getwd()
 
 #data preparation
-borough_list <- readRDS("../output/borough_list.Rda")
-cuisine_list <- readRDS("../output/cuisine_list.Rda")
+borough_list <- readRDS("output/borough_list.Rda")
+cuisine_list <- readRDS("output/cuisine_list.Rda")
 
 #==============================================Shiny UI=================================================
 # Define UI for application that display food inspections result visualization
@@ -201,25 +201,25 @@ ui <- navbarPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   #import pre-processed data
-  violations <- readRDS("../output/violations.Rda")
-  score_map <- readRDS("../output/score_map.Rda")
-  df <- readRDS("../output/df.Rda")
-  American <- readRDS("../output/American.Rda")
-  Chinese <- readRDS("../output/Chinese.Rda")
-  Coffee <- readRDS("../output/Coffee.Rda")
-  Italian <- readRDS("../output/Italian.Rda")
-  Mexican <- readRDS("../output/Mexican.Rda")
-  Pizza <- readRDS("../output/Pizza.Rda")
-  Others <- readRDS("../output/Others.Rda")
-  critical_2022 <- readRDS("../output/critical_2022.Rda")
-  critical_2021 <- readRDS("../output/critical_2021.Rda")
-  critical_2020 <- readRDS("../output/critical_2020.Rda")
-  critical_2019 <- readRDS("../output/critical_2019.Rda")
-  total_2022 <- readRDS("../output/total_2022.Rda")
-  total_2021 <- readRDS("../output/total_2021.Rda")
-  total_2020 <- readRDS("../output/total_2020.Rda")
-  total_2019 <- readRDS("../output/total_2019.Rda")
-  comparison <- readRDS("../output/comparison.Rda")
+  violations <- readRDS("output/violations.Rda")
+  score_map <- readRDS("output/score_map.Rda")
+  df <- readRDS("output/df.Rda")
+  American <- readRDS("output/American.Rda")
+  Chinese <- readRDS("output/Chinese.Rda")
+  Coffee <- readRDS("output/Coffee.Rda")
+  Italian <- readRDS("output/Italian.Rda")
+  Mexican <- readRDS("output/Mexican.Rda")
+  Pizza <- readRDS("output/Pizza.Rda")
+  Others <- readRDS("output/Others.Rda")
+  critical_2022 <- readRDS("output/critical_2022.Rda")
+  critical_2021 <- readRDS("output/critical_2021.Rda")
+  critical_2020 <- readRDS("output/critical_2020.Rda")
+  critical_2019 <- readRDS("output/critical_2019.Rda")
+  total_2022 <- readRDS("output/total_2022.Rda")
+  total_2021 <- readRDS("output/total_2021.Rda")
+  total_2020 <- readRDS("output/total_2020.Rda")
+  total_2019 <- readRDS("output/total_2019.Rda")
+  comparison <- readRDS("output/comparison.Rda")
 
   # Filtered plots
   output$plot_action <- renderPlot({

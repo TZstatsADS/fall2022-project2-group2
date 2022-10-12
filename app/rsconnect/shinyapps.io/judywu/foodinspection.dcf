@@ -1,0 +1,13 @@
+name: foodinspection
+title: foodinspection
+username:
+account: judywu
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7290884
+bundleId: 6396901
+url: https://judywu.shinyapps.io/foodinspection/
+when: 1665609430.03788
+lastSyncTime: 1665609430.03789
+asMultiple: FALSE
+asStatic: FALSE
