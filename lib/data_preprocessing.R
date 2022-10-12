@@ -87,9 +87,9 @@ spdf_data <- tidy(spdf_file,
 
 borough_list <- append("Overall", unique(df$boro))
 cuisine_list <- append("Overall", unique(df$cuisine_description))
-saveRDS(borough_list,file="../data/borough_list.Rda")
-saveRDS(cuisine_list,file="../data/cuisine_list.Rda")
-saveRDS(df,file = "../data/df.Rda")
+saveRDS(borough_list,file="../output/borough_list.Rda")
+saveRDS(cuisine_list,file="../output/cuisine_list.Rda")
+saveRDS(df,file = "../output/df.Rda")
 ##============ Data Preparation for Violation Maps =============
 ####=====critical violations ============#####
 ### Grade info for each type of restaurant
@@ -110,24 +110,31 @@ grades =
 
 American = 
   grades%>%filter(CUISINE.TYPE == "American")
+saveRDS(American,file="../output/American.Rda")
 
 Chinese= 
   grades%>%filter(CUISINE.TYPE == "Chinese")
+saveRDS(Chinese,file="../output/Chinese.Rda")
 
 Coffee = 
   grades%>%filter(CUISINE.TYPE == "Coffee")
+saveRDS(Coffee,file="../output/Coffee.Rda")
 
 Italian = 
   grades%>%filter(CUISINE.TYPE == "Italian")
+saveRDS(Italian,file="../output/Italian.Rda")
 
 Pizza = 
   grades%>%filter(CUISINE.TYPE == "Pizza")
+saveRDS(Pizza,file="../output/Pizza.Rda")
 
 Mexican = 
   grades%>%filter(CUISINE.TYPE == "Mexican")
+saveRDS(Mexican,file="../output/Mexican.Rda")
 
 Others = 
   grades%>%filter(CUISINE.TYPE == "Others")
+saveRDS(Others,file="../output/Others.Rda")
 
 #### Number of restaurant per ZIPCODE
 Num_Rest_Code =
@@ -162,177 +169,36 @@ Critical_2022_by_Code =
   summarize(Total = n())
 
 
-spdf_file_2022 = spdf_file
-spdf_file_2022@data =
-  spdf_file_2022@data %>%
+Critical_spdf_file_2022 = spdf_file
+Critical_spdf_file_2022@data =
+  Critical_spdf_file_2022@data %>%
   left_join(Critical_2022_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Critical_spdf_file_2022,file="../output/critical_2022.Rda")
 
 
 
-spdf_file_2019 = spdf_file
-spdf_file_2019@data =
-  spdf_file_2019@data %>%
+Critical_spdf_file_2019 = spdf_file
+Critical_spdf_file_2019@data =
+  Critical_spdf_file_2019@data %>%
   left_join(Critical_2019_by_Code, c("ZIPCODE"="zipcode"))
 
-spdf_file_2020 = spdf_file
-spdf_file_2020@data =
-  spdf_file_2020@data %>%
+saveRDS(Critical_spdf_file_2019,file="../output/critical_2019.Rda")
+
+Critical_spdf_file_2020 = spdf_file
+Critical_spdf_file_2020@data =
+  Critical_spdf_file_2020@data %>%
   left_join(Critical_2020_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Critical_spdf_file_2020,file="../output/critical_2020.Rda")
 
-spdf_file_2021 = spdf_file
-spdf_file_2021@data =
-  spdf_file_2021@data %>%
+Critical_spdf_file_2021 = spdf_file
+Critical_spdf_file_2021@data =
+  Critical_spdf_file_2021@data %>%
   left_join(Critical_2021_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Critical_spdf_file_2021,file="../output/critical_2021.Rda")
 
-nc_pal= colorNumeric(palette="YlOrBr", domain= spdf_file_2022@data$Total, na.color = 'transparent')
+critical_violations <- list(Critical_spdf_file_2019, Critical_spdf_file_2020, Critical_spdf_file_2021, Critical_spdf_file_2022)
+names(critical_violations) <- c("2019", "2020", "2021", "2022")
 
-
-Critical_Violation_Map=
-  leaflet()%>%
-  addProviderTiles("CartoDB")%>%
-  addSearchOSM()%>%
-  addReverseSearchOSM()%>%
-  #### First Layer of PolyGons
-  addPolygons(
-    data = spdf_file_2022 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label = ~paste0 ('Total Critical Violation : ' , Total),
-    group = '2022',
-    fillOpacity = 0.7,
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  #### Second Layer of PolyGons
-  addPolygons(
-    data = spdf_file_2021 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label =~paste0 ('Total Critical Violation : ' , Total),
-    group = '2021',
-    fillOpacity = 0.7,
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  addPolygons(
-    data = spdf_file_2020 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label = ~paste0 ('Total Critical Violation : ' , Total),
-    group = '2020',
-    fillOpacity = 0.7,
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  #### Third Layer of PolyGons
-  addPolygons(
-    data = spdf_file_2019 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label =~paste0 ('Total Critical Violation : ' , Total),
-    group = '2019',
-    fillOpacity = 0.7,
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  ##### layer of grades of restaurnts
-  
-  addMarkers(data = American,lng = ~longitude, lat = ~latitude, 
-             
-             label = ~htmlEscape(dba),
-             group = 'American',
-             popup  = paste0("<b>",American$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', American$cuisine_description, 
-                             "<br/>", 'Phone Number: ', American$phone,
-                             "<br/>", 'Grade: ', American$grade,
-                             "<br/>",'Latest Violation: ', American$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  addMarkers(data = Chinese,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Chinese',
-             popup  = paste0("<b>",Chinese$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Chinese$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Chinese$phone,
-                             "<br/>", 'Grade: ', Chinese$grade,
-                             "<br/>",'Latest Violation: ', Chinese$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  addMarkers(data = Pizza,lng = ~longitude, lat = ~latitude, 
-             
-             label = ~htmlEscape(dba),
-             group = 'Pizza',
-             popup  = paste0("<b>",Pizza$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Pizza$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Pizza$phone,
-                             "<br/>", 'Grade: ', Pizza$grade,
-                             "<br/>",'Latest Violation: ', Pizza$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  
-  addMarkers(data = Mexican,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Mexican',
-             popup  = paste0("<b>",Mexican$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Mexican$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Mexican$phone,
-                             "<br/>", 'Grade: ', Mexican$grade,
-                             "<br/>",'Latest Violation: ', Mexican$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  
-  addMarkers(data = Italian,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Italian',
-             popup  = paste0("<b>",Italian$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Italian$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Italian$phone,
-                             "<br/>", 'Grade: ', Italian$grade,
-                             "<br/>",'Latest Violation: ', Italian$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  addMarkers(data = Coffee,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Coffee',
-             popup  = paste0("<b>",Coffee$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Coffee$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Coffee$phone,
-                             "<br/>", 'Grade: ', Coffee$grade,
-                             "<br/>",'Latest Violation: ', Coffee$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  addMarkers(data = Others,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Others',
-             popup  = paste0("<b>",Others$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Others$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Others$phone,
-                             "<br/>", 'Grade: ', Others$grade,
-                             "<br/>",'Latest Violation: ', Others$violation_description),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  
-  addLayersControl( baseGroups = c("2022", "2021","2020","2019"),overlayGroups = c("American", "Chinese","Coffee","Pizza", "Italian","Mexican", "Others"))%>%
-  addLegend( pal=nc_pal, values= spdf_file_2022$Total, opacity=0.9, title = "Critical Violation Counts", position = "bottomleft" )
-
-Critical_Violation_Map
-saveRDS(Critical_Violation_Map,file="../lib/critical_cluster.Rda")
 
 ###=====total violations========
 Total_2019_by_Code = 
@@ -364,190 +230,34 @@ Total_2022_by_Code =
 
 
 ##### Join datasets
-spdf_file_2022 = spdf_file
-spdf_file_2022@data =
-  spdf_file_2022@data %>%
+Total_spdf_file_2022 = spdf_file
+Total_spdf_file_2022@data =
+  Total_spdf_file_2022@data %>%
   left_join(Total_2022_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Total_spdf_file_2022,file="../output/total_2022.Rda")
 
 
-
-spdf_file_2019 = spdf_file
-spdf_file_2019@data =
-  spdf_file_2019@data %>%
+Total_spdf_file_2019 = spdf_file
+Total_spdf_file_2019@data =
+  Total_spdf_file_2019@data %>%
   left_join(Total_2019_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Total_spdf_file_2019,file="../output/total_2019.Rda")
 
-
-spdf_file_2020 = spdf_file
-spdf_file_2020@data =
-  spdf_file_2020@data %>%
+Total_spdf_file_2020 = spdf_file
+Total_spdf_file_2020@data =
+  Total_spdf_file_2020@data %>%
   left_join(Total_2020_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Total_spdf_file_2020,file="../output/total_2020.Rda")
 
-spdf_file_2021 = spdf_file
-spdf_file_2021@data =
-  spdf_file_2021@data %>%
+Total_spdf_file_2021 = spdf_file
+Total_spdf_file_2021@data =
+  Total_spdf_file_2021@data %>%
   left_join(Total_2021_by_Code, c("ZIPCODE"="zipcode"))
+saveRDS(Total_spdf_file_2021,file="../output/total_2021.Rda")
 
 
-
-
-
-
-##### colors
-nc_pal= colorNumeric(palette="YlOrBr", domain= spdf_file_2022@data$Total, na.color = 'transparent')
-
-
-Total_Violation_Map=
-  
-  leaflet()%>%
-  addProviderTiles("CartoDB")%>%
-  setView(lng= -73.95223 , lat =40.78410	 , zoom = 10)%>%
-  addSearchOSM()%>%
-  #### First Layer of PolyGons
-  addPolygons(
-    data = spdf_file_2022 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label = ~paste0 ('Total Critical Violation : ' , Total),
-    group = '2022',
-    fillOpacity = 0.7,   
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  #### Second Layer of PolyGons
-  addPolygons(
-    data = spdf_file_2021 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label =~paste0 ('Total  Violation : ' , Total),
-    group = '2021',
-    fillOpacity = 0.7,
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  addLayersControl(overlayGroups = c("2022", "2021"))%>%
-  
-  #####Third layer
-  addPolygons(
-    data = spdf_file_2020 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    fillOpacity = 0.7,
-    label =~paste0 ('Total  Violation : ' , Total),
-    group = '2020',
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  ####Fourth Layer
-  addPolygons(
-    data = spdf_file_2019 ,
-    weight = 0.5,
-    color = "black",
-    stroke=TRUE ,
-    opacity = 1 ,
-    fillColor = ~nc_pal(Total),
-    label =~paste0 ('Total  Violation : ' , Total),
-    group = '2019',
-    fillOpacity = 0.7,
-    highlight = highlightOptions(weight  = 3, color = "red", bringToFront =  T)
-  ) %>%
-  
-  
-  ##### Fifth layer of grades of restaurants
-  
-  
-  
-  addMarkers(data = American,lng = ~longitude, lat = ~latitude, 
-             
-             label = ~htmlEscape(dba),
-             group = 'American',
-             popup  = paste0("<b>",American$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', American$cuisine_description, 
-                             "<br/>", 'Phone Number: ', American$phone,
-                             "<br/>", 'Grade: ', American$grade,
-                             "<br/>",'Latest Violation: ', American$violation_description),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  addMarkers(data = Chinese,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Chinese',
-             popup  = paste0("<b>",Chinese$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Chinese$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Chinese$phone,
-                             "<br/>", 'Grade: ', Chinese$grade,
-                             "<br/>",'Latest Violation: ', Chinese$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  addMarkers(data = Pizza,lng = ~longitude, lat = ~latitude, 
-             
-             label = ~htmlEscape(dba),
-             group = 'Pizza',
-             popup  = paste0("<b>",Pizza$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Pizza$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Pizza$phone,
-                             "<br/>", 'Grade: ', Pizza$grade,
-                             "<br/>",'Latest Violation: ', Pizza$violation_description),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  
-  addMarkers(data = Mexican,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Mexican',
-             popup  = paste0("<b>",Mexican$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Mexican$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Mexican$phone,
-                             "<br/>", 'Grade: ', Mexican$grade,
-                             "<br/>",'Latest Violation: ', Mexican$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  
-  addMarkers(data = Italian,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Italian',
-             popup  = paste0("<b>",Italian$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Italian$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Italian$phone,
-                             "<br/>", 'Grade: ', Italian$grade,
-                             "<br/>",'Latest Violation: ', Italian$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  addMarkers(data = Coffee,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Coffee',
-             popup  = paste0("<b>",Coffee$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Coffee$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Coffee$phone,
-                             "<br/>", 'Grade: ', Coffee$grade,
-                             "<br/>",'Latest Violation: ', Coffee$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  addMarkers(data = Others,lng = ~longitude, lat = ~latitude, 
-             label = ~htmlEscape(dba),
-             group = 'Others',
-             popup  = paste0("<b>",Others$dba,"</b>", 
-                             "<br/>", 'Cuisine Type: ', Others$cuisine_description, 
-                             "<br/>", 'Phone Number: ', Others$phone,
-                             "<br/>", 'Grade: ', Others$grade,
-                             "<br/>",'Latest Violation: ', Others$violation_description ),
-             clusterOptions = markerClusterOptions()
-  ) %>% 
-  
-  
-  addLayersControl( baseGroups = c("2022", "2021","2020","2019"),overlayGroups = c("American", "Chinese","Coffee","Pizza", "Italian","Mexican", "Others"))%>%
-  addLegend( pal=nc_pal, values= spdf_file_2022$Total, opacity=0.9, title = "Total Violation Counts", position = "bottomleft" )
-
-Total_Violation_Map
-saveRDS(Total_Violation_Map,file="../lib/total_cluster.Rda")
+total_violation <- list(Total_spdf_file_2019, Total_spdf_file_2020, Total_spdf_file_2021, Total_spdf_file_2022)
+names(total_violation) <- c("2019", "2020", "2021", "2022")
 
 
 
@@ -602,9 +312,15 @@ Score_spdf_file_2022@data <- Score_spdf_file_2022@data %>%
 score_map <- list(Score_spdf_file_2019,Score_spdf_file_2020,Score_spdf_file_2021,Score_spdf_file_2022)
 names(score_map) <- c("2019","2020","2021","2022")
 
-#save processed score data
-saveRDS(score_map,file = "../data/score_map.Rda")
+comparison <- list(critical_violations,total_violation,score_map)
+names(comparison) <-  c("Number of Total Violations", "Number of Crital Violations","Mean Score")
+violations <- list(total_violation,critical_violations)
+names(violations) <- c("Number of Total Violations","Number of Crital Violations")
 
+#save processed score data
+saveRDS(comparison,file = "../output/comparison.Rda")
+saveRDS(score_map,file="../output/score_map.Rda")
+saveRDS(violations,file = "../output/violations.Rda")
 
 
 
