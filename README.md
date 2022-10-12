@@ -24,11 +24,12 @@ This folder is orgarnized as follows.
 ```
 proj/
 ├── app/
+	└── output/
 ├── data/
 ├── doc/
 ├── figs/
 ├── lib/
-└── output/
+
 ```
 
 Please see each subfolder for a README file.
