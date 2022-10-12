@@ -146,25 +146,25 @@ Num_Rest_Code =
 
 Critical_2019_by_Code = 
   df%>%
-  filter(year == 2019)%>%
+  filter(year == 2019&critical_flag == "Critical")%>%
   group_by(zipcode)%>%
   summarize(Total = n())
 
 Critical_2020_by_Code = 
   df%>%
-  filter(year == 2020)%>%
+  filter(year == 2020&critical_flag == "Critical")%>%
   group_by(zipcode)%>%
   summarize(Total = n())
 
 Critical_2021_by_Code = 
   df%>%
-  filter(year == 2021)%>%
+  filter(year == 2021&critical_flag == "Critical")%>%
   group_by(zipcode)%>%
   summarize(Total = n())
 
 Critical_2022_by_Code = 
   df%>%
-  filter(year == 2022)%>%
+  filter(year == 2022&critical_flag == "Critical")%>%
   group_by(zipcode)%>%
   summarize(Total = n())
 

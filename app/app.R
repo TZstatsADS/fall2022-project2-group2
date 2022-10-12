@@ -308,7 +308,7 @@ server <- function(input, output) {
   
   ########### Interactive map ###############
   #violation map
-  nc_pal= colorNumeric(palette="YlOrBr", domain= total_2022@data$Total, na.color = 'transparent')
+  
   output$map <- renderLeaflet({
     ##### colors
     selectedData <- reactive({
@@ -332,6 +332,10 @@ server <- function(input, output) {
         "Critical Violations Count"
       }
     )
+  
+        
+      nc_pal <- colorNumeric(palette="YlOrBr", domain= selectedData()$spdf_file_2022@data$Total, na.color = 'transparent')
+     
     leaflet(options = leafletOptions(preferCanvas = T))%>%
       addProviderTiles("CartoDB", options = providerTileOptions(updateWhenIdle = T, updateWhenZooming =F))%>%
       setView(lng= -73.95223 , lat =40.78410	 , zoom = 10)%>%
@@ -482,7 +486,6 @@ server <- function(input, output) {
     
   })
   
-  # Interactive map compared by year  
   legend_title2 <- reactive(
     if(input$type_comp =="Number of Total Violations"){
       "Total Violations Count"
@@ -491,7 +494,21 @@ server <- function(input, output) {
       "Critical Violations Count"
     }
   )
+  
+  # Interactive map compared by year  
   output$map_comp1 <- renderLeaflet({
+    
+    selectedData_com1 <- reactive({
+      if(input$type_comp =="Number of Total Violations"){
+        list(spdf_file_2022 = total_2022)
+      }
+      else {
+        list(spdf_file_2022 = critical_2022)
+      }
+    })
+    
+
+    nc_pal <- colorNumeric(palette="YlOrBr", domain= selectedData_com1()$spdf_file_2022@data$Total, na.color = 'transparent')
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
       addSearchOSM()%>%
@@ -507,10 +524,19 @@ server <- function(input, output) {
         group = '2022',
         highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
       ) %>%
-      addLegend(pal = nc_pal, values= violations[[input$type]][[input$time1]]$Total, opacity=0.9, title = legend_title2(), position = "bottomleft" )
+      addLegend(pal = nc_pal, values= selectedData_com1()$spdf_file_2022$Total, opacity=0.9, title = legend_title2(), position = "bottomleft" )
   })
   
   output$map_comp2 <- renderLeaflet({
+    selectedData_com2 <- reactive({
+      if(input$type_comp =="Number of Total Violations"){
+        list(spdf_file_2022 = total_2022)
+      }
+      else {
+        list(spdf_file_2022 = critical_2022)
+      }
+    })
+    nc_pal <- colorNumeric(palette="YlOrBr", domain= selectedData_com2()$spdf_file_2022@data$Total, na.color = 'transparent')
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
       addSearchOSM()%>%
@@ -526,7 +552,7 @@ server <- function(input, output) {
         group = '2022',
         highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
       ) %>%
-      addLegend(pal = nc_pal, values = violations[[input$type]][[input$time2]]$Total, opacity = 0.9, title = legend_title2(), position = "bottomleft" )
+      addLegend(pal = nc_pal, values = selectedData_com2()$spdf_file_2022$Total, opacity = 0.9, title = legend_title2(), position = "bottomleft" )
   })
   
   # Interactive score map
