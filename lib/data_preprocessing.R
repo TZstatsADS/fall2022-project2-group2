@@ -313,9 +313,9 @@ score_map <- list(Score_spdf_file_2019,Score_spdf_file_2020,Score_spdf_file_2021
 names(score_map) <- c("2019","2020","2021","2022")
 
 comparison <- list(critical_violations,total_violation,score_map)
-names(comparison) <-  c("Number of Total Violations", "Number of Crital Violations","Mean Score")
+names(comparison) <-  c("Number of Total Violations", "Number of Critical Violations","Mean Score")
 violations <- list(total_violation,critical_violations)
-names(violations) <- c("Number of Total Violations","Number of Crital Violations")
+names(violations) <- c("Number of Total Violations","Number of Critical Violations")
 
 #save processed score data
 saveRDS(comparison,file = "../output/comparison.Rda")

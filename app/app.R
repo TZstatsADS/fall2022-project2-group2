@@ -133,7 +133,7 @@ ui <- navbarPage(
              tabPanel("Number of Violations",
                       fluidRow(
                         column(3,
-                               selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Crital Violations"))
+                               selectInput("type", "Type of Violations",c("Number of Total Violations", "Number of Critical Violations"))
                         ),
                         column(9,
                                leafletOutput("map", height = 600)
@@ -157,7 +157,7 @@ ui <- navbarPage(
            tabPanel("Number of Violations",
                     fluidRow(
              column(4,
-                    selectInput("type_comp", "Type of Violations", c("Number of Total Violations", "Number of Crital Violations"))
+                    selectInput("type_comp", "Type of Violations", c("Number of Total Violations", "Number of Critical Violations"))
              ),
              column(4,
                     selectInput("time1", "Year", c("2019", "2020", "2021", "2022"))
@@ -317,15 +317,23 @@ server <- function(input, output) {
              spdf_file_2021 = total_2021,
              spdf_file_2020 = total_2020,
              spdf_file_2019 = total_2019)
-      } else if(input$type == "Number of Crital Violations") {
+      } else {
         list(spdf_file_2022 = critical_2022,
              spdf_file_2021 = critical_2021,
              spdf_file_2020 = critical_2020,
              spdf_file_2019 = critical_2019)
       }
     })
-    leaflet()%>%
-      addProviderTiles("CartoDB")%>%
+    legend_title <- reactive(
+      if(input$type =="Number of Total Violations"){
+        "Total Violations Count"
+      }
+      else {
+        "Critical Violations Count"
+      }
+    )
+    leaflet(options = leafletOptions(preferCanvas = T))%>%
+      addProviderTiles("CartoDB", options = providerTileOptions(updateWhenIdle = T, updateWhenZooming =F))%>%
       setView(lng= -73.95223 , lat =40.78410	 , zoom = 10)%>%
       addSearchOSM()%>%
       #### First Layer of PolyGons
@@ -470,14 +478,23 @@ server <- function(input, output) {
       
       
       addLayersControl( baseGroups = c("2022", "2021","2020","2019"),overlayGroups = c("American", "Chinese","Coffee","Pizza", "Italian","Mexican", "Others"))%>%
-      addLegend( pal=nc_pal, values= selectedData()$spdf_file_2022$Total, opacity=0.9, title = "Total Violation Counts", position = "bottomleft" )
+      addLegend( pal=nc_pal, values= selectedData()$spdf_file_2022$Total, opacity=0.9, title = legend_title(), position = "bottomleft" )
     
   })
   
   # Interactive map compared by year  
+  legend_title2 <- reactive(
+    if(input$type_comp =="Number of Total Violations"){
+      "Total Violations Count"
+    }
+    else {
+      "Critical Violations Count"
+    }
+  )
   output$map_comp1 <- renderLeaflet({
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
+      addSearchOSM()%>%
       addPolygons(
         data = violations[[input$type_comp]][[input$time1]],
         weight = 0.5,
@@ -490,12 +507,13 @@ server <- function(input, output) {
         group = '2022',
         highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
       ) %>%
-      addLegend(pal = nc_pal, values= violations[[input$type]][[input$time1]]$Total, opacity=0.9, title = "Count of Total Violation", position = "bottomleft" )
+      addLegend(pal = nc_pal, values= violations[[input$type]][[input$time1]]$Total, opacity=0.9, title = legend_title2(), position = "bottomleft" )
   })
   
   output$map_comp2 <- renderLeaflet({
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
+      addSearchOSM()%>%
       addPolygons(
         data = violations[[input$type_comp]][[input$time2]],
         weight = 0.5,
@@ -508,7 +526,7 @@ server <- function(input, output) {
         group = '2022',
         highlight = highlightOptions(weight = 3, color = "red", bringToFront = TRUE)
       ) %>%
-      addLegend(pal = nc_pal, values = violations[[input$type]][[input$time2]]$Total, opacity = 0.9, title = "Count of Total Violation", position = "bottomleft" )
+      addLegend(pal = nc_pal, values = violations[[input$type]][[input$time2]]$Total, opacity = 0.9, title = legend_title2(), position = "bottomleft" )
   })
   
   # Interactive score map
@@ -516,6 +534,7 @@ server <- function(input, output) {
     nc_pal <- colorNumeric(palette ="Greens", domain = score_map[[3]]@data$mean_score, na.color = 'transparent')
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
+      addSearchOSM()%>%
       addPolygons(
         data = score_map[[input$score_year]],
         weight = 0.5,
@@ -534,6 +553,7 @@ server <- function(input, output) {
     nc_pal <- colorNumeric(palette ="Greens", domain = score_map[[3]]@data$mean_score, na.color = 'transparent')
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
+      addSearchOSM()%>%
       addPolygons(
         data = score_map[[input$t1]],
         weight = 0.5,
@@ -552,6 +572,7 @@ server <- function(input, output) {
     nc_pal <- colorNumeric(palette ="Greens", domain = score_map[[3]]@data$mean_score, na.color = 'transparent')
     leaflet() %>%
       addProviderTiles("CartoDB") %>%
+      addSearchOSM()%>%
       addPolygons(
         data = score_map[[input$t2]],
         weight = 0.5,
