@@ -28,7 +28,7 @@ proj/
 ├── data/
 ├── doc/
 ├── figs/
-├── lib/
+└── lib/
 
 ```
 
