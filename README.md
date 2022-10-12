@@ -24,9 +24,10 @@ This folder is orgarnized as follows.
 ```
 proj/
 ├── app/
-├── lib/
 ├── data/
 ├── doc/
+├── figs/
+├── lib/
 └── output/
 ```
 
