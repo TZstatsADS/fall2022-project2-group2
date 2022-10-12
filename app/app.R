@@ -102,11 +102,13 @@ ui <- navbarPage(
                left = "auto",
                right="auto",
                height = 150,
-               width = 650,
+               width = 600,
                fixed = T,
-               tags$p(
+               tags$div(
                  style = "padding: 5%; background-color: white; font-family: alegreya; font-size: 100%",
-                 "This app uses the New York City Restaurant Inspection dataset, provided by the Department of Health and Mental Hygiene, to examine the most recent inspection conducted for restaurants and college cafeterias in NYC from 2019 to 2022. We provide visualizations of violation trend throughout the years, interactive maps of number of violations as well as inspection score, and comparison of number of violations between years to show the effect of COVID-19 on restaurant inspection activities in NYC."
+                 "This app uses the ",
+                 tags$a(href="https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/43nn-pn8j", "New York City Restaurant Inspection"),
+                 "dataset, provided by the Department of Health and Mental Hygiene, to examine the most recent inspection conducted for restaurants and college cafeterias in NYC from 2019 to 2022. We provide visualizations of violation trend throughout the years, interactive maps of number of violations and inspection score, as well as comparison of violations between years to show the effect of COVID-19 on restaurant inspection activities in NYC."
                )
   ))),
   
@@ -118,9 +120,9 @@ ui <- navbarPage(
                     selectInput("cuisine", "Cuisine", cuisine_list, selected = "Overall")
              ),
              column(9, 
-                    plotOutput("plot_action"),
-                    plotOutput("plot_critical_level"),
-                    plotOutput("plot_top_5_violation")
+                    plotOutput("plot_action", width="100%", height="600px"),
+                    plotOutput("plot_critical_level", width="100%", height="600px"),
+                    plotOutput("plot_top_5_violation", width="100%", height="600px")
              )
            )
   ),
@@ -150,8 +152,8 @@ ui <- navbarPage(
              )
   ),
   
-  # Tab 4: Comparison by Years
- navbarMenu("Comparison by Years",
+  # Tab 4: Comparison by Year
+ navbarMenu("Comparison by Year",
            tabPanel("Number of Violations",
                     fluidRow(
              column(4,
@@ -173,7 +175,7 @@ ui <- navbarPage(
                     leafletOutput("map_comp2", height = 600)
              )
            )),
-           tabPanel("Mean Scores",
+           tabPanel("Inspection Score",
                     fluidRow(
                       
                       column(6,
@@ -192,10 +194,7 @@ ui <- navbarPage(
                              leafletOutput("score_comp2", height = 600)
                       )
                     ))
-  ),
-  
-  # Tab 5: References
-  tabPanel("Reference")
+  )
 )
 
 #========================================Shiny Server=================================================
@@ -211,6 +210,7 @@ server <- function(input, output) {
   Italian <- readRDS("../output/Italian.Rda")
   Mexican <- readRDS("../output/Mexican.Rda")
   Pizza <- readRDS("../output/Pizza.Rda")
+  Others <- readRDS("../output/Others.Rda")
   critical_2022 <- readRDS("../output/critical_2022.Rda")
   critical_2021 <- readRDS("../output/critical_2021.Rda")
   critical_2020 <- readRDS("../output/critical_2020.Rda")
